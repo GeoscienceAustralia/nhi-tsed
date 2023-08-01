@@ -116,6 +116,7 @@ def main(config, verbose=False):
     :param boolean verbose: If `True`, print logging messages to STDOUT
 
     """
+    global g_stations
     logfile = config.get("Logging", "LogFile")
     loglevel = config.get("Logging", "LogLevel", fallback="INFO")
     verbose = config.getboolean("Logging", "Verbose", fallback=verbose)
@@ -165,7 +166,7 @@ def main(config, verbose=False):
 
 
     ListAllFiles(config)
-    # processStationFiles(config)
+    LoadStationFile(config)
     processFiles(config)
 
     endtime = datetime.now().strftime(DATEFMT)
@@ -180,6 +181,7 @@ def main(config, verbose=False):
     prov.actedOnBehalfOf(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
     prov.used(provlabel, configent)
+    prov.used(provlabel, ":GeospatialStationData")
     prov.wasAssociatedWith(extractionact, sys.argv[0])
 
     prov.serialize(pjoin(outputDir, "extraction.xml"), format="xml")
@@ -188,6 +190,27 @@ def main(config, verbose=False):
         LOGGER.info(f"Processed {len(g_files[key])} {key} files")
     LOGGER.info("Completed")
 
+
+def LoadStationFile(config):
+    """
+    Load a list of stations from a previously-processed GeoJSON file
+
+    :param config: `ConfigParser` object
+
+    """
+    global g_stations
+
+    stationFile = config.get("ObservationFiles", "StationFile")
+    g_stations = gpd.read_file(stationFile)
+    g_stations.set_index("stnNum", inplace=True)
+    prov.entity(":GeospatialStationData",
+                {
+                    "dcterms:type": "void:dataset",
+                    "dcterms:description": "Geospatial station information",
+                    "prov:atLocation": stationFile,
+                    "prov:GeneratedAt": flModDate(stationFile),
+                    "dcterms:format": "GeoJSON",
+                })
 
 def ListAllFiles(config):
     """
@@ -368,8 +391,8 @@ def processFile(filename: str, config) -> bool:
     prov.entity(":stormEventData").add_attributes({"format": outputFormat})
 
     outputDir = config.get("Output", "Path")
-    threshold = config.getfloat("Input", "Threshold")
-    prov.entity(":stormEventData").add_attributes({"threshold": threshold})
+    threshold = config.getfloat("ObservationFiles", "Threshold")
+
     ext = "pkl" if outputFormat == "pickle" else "csv"
     outfunc = "to_pickle" if outputFormat == "pickle" else "to_csv"
     LOGGER.info(f"Loading data from {filename}")
