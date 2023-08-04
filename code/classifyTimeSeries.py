@@ -25,6 +25,7 @@ from prov.model import ProvDocument
 
 from sklearn.preprocessing import StandardScaler
 from sktime.classification.kernel_based import RocketClassifier
+import sktime
 
 from stndata import ONEMINUTESTNNAMES
 from files import flStartLog, flGitRepository
@@ -44,7 +45,8 @@ prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 provlabel = ":stormDataClassification"
 provtitle = "Storm data classification"
-codeagent = prov.agent(
+
+codeent = prov.entity(
     sys.argv[0],
     {
         "dcterms:type": "prov:SoftwareAgent",
@@ -54,6 +56,24 @@ codeagent = prov.agent(
         "prov:url": url,
     },
 )
+
+sktimeent = prov.entity(
+    "sktime",
+    {
+        "prov:Revision": sktime.__version__,
+        "prov:url": "http://doi.org/10.5281/zenodo.3749000"
+    }
+)
+
+pandasent = prov.entity(
+    "pandas",
+    {
+        "prov:Revision": pd.__version__,
+        "prov:url": "https://doi.org/10.5281/zenodo.3509134"
+    }
+)
+
+
 # We use the current user as the primary agent:
 useragent = prov.agent(f":{getpass.getuser()}", {"prov:type": "prov:Person"})
 
@@ -62,7 +82,7 @@ orgagent = prov.agent(
     {"prov:type": "prov:Organisation", "foaf:name": "Geoscience Australia"},
 )
 
-prov.actedOnBehalfOf(codeagent, useragent)
+prov.wasAssociatedWith(codeent, useragent)
 prov.actedOnBehalfOf(useragent, orgagent)
 
 # Following can be put into command line args or config file:
@@ -469,7 +489,9 @@ prov.wasDerivedFrom(outputstdef, stdef)
 classact = prov.activity(provlabel, starttime, endtime)
 prov.used(classact, stdef)
 prov.used(classact, stnent)
-prov.wasAssociatedWith(classact, codeagent)
+prov.wasGeneratedBy(classact, codeent)
+prov.wasDerivedFrom(codeent, sktimeent)
+prov.wasDerivedFrom(codeent, pandasent)
 prov.wasGeneratedBy(outputstdef, classact, time=starttime)
 prov.wasGeneratedBy(stormcountfig, classact)
 for pltent, pltact in zip(pltents, pltacts):
