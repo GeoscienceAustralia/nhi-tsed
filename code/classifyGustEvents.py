@@ -83,6 +83,7 @@ def start():
     config = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
     config.optionxform = str
     config.read(configFile)
+    config.configFile = configFile
 
     pInit(configFile)
     main(config, verbose)
