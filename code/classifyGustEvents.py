@@ -316,7 +316,7 @@ def processFiles(config):
         if pAlreadyProcessed(directory, fname, "md5sum", md5sum):
             LOGGER.info(f"Already processed {f}")
         else:
-            if processFile(f, outputDir):
+            if processFile(f, config):
                 LOGGER.info(f"Successfully processed {f}")
                 pWriteProcessedFile(f)
                 if archiveWhenProcessed:
