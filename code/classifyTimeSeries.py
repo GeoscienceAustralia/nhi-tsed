@@ -159,7 +159,8 @@ def loadData(stnNum: int, datapath: str) -> pd.DataFrame:
     LOGGER.debug(f"Loading event data from {fname}")
     df = pd.read_pickle(fname)
     df["date"] = pd.to_datetime(df["date"])
-    vars = ["windgust", "tempanom", "stnpanom", "dpanom", "windspd", "uanom", "vanom"]
+    vars = ["windgust", "tempanom", "stnpanom",
+            "dpanom", "windspd", "uanom", "vanom"]
     for var in vars:
         df[var] = df[var].interpolate(method="linear").fillna(method="bfill")
 
@@ -304,14 +305,14 @@ XX_test = np.moveaxis(X_test.values.reshape((200, 121, nvars)), 1, -1)
 
 # Here we use the full set of visually classified events for training
 # the classifier:
-fulltrain = vcdf.loc[stormdf.index].reset_index().set_index(["idx", "tdiff"])[vars]
+fulltrain = vcdf.loc[stormdf.index].reset_index().set_index(["idx", "tdiff"])[vars]  # noqa: E501
 fulltrainarray = np.moveaxis(
     (fulltrain.values.reshape((len(stormdf), 121, nvars))), 1, -1
 )
 
 # Create array of storm types from the visually classified data:
 fully = np.array(
-    list(stormdf.loc[fulltrain.reset_index()["idx"].unique()]["stormType"].values)
+    list(stormdf.loc[fulltrain.reset_index()["idx"].unique()]["stormType"].values)  # noqa: E501
 )
 
 # First start with the training set:
@@ -319,7 +320,7 @@ LOGGER.info("Running the training set")
 rocket = RocketClassifier(num_kernels=10000)
 rocket.fit(XX, y)
 y_pred = rocket.predict(XX_test)
-results = pd.DataFrame(data={"prediction": y_pred, "visual": test_storms["stormType"]})
+results = pd.DataFrame(data={"prediction": y_pred, "visual": test_storms["stormType"]})  # noqa: E501
 score = rocket.score(XX_test, test_storms["stormType"])
 LOGGER.info(f"Accuracy of the classifier for the training set: {score}")
 
@@ -412,7 +413,7 @@ outputstormdf = pd.DataFrame(
 )
 
 LOGGER.debug("Writing storm value counts to file")
-outputstormdf.stormType.value_counts().to_excel(pjoin(OUTPUTPATH, "stormcounts.xlsx"))
+outputstormdf.stormType.value_counts().to_excel(pjoin(OUTPUTPATH, "stormcounts.xlsx"))  # noqa: E501
 
 
 LOGGER.debug("Plotting storm counts")

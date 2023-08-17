@@ -74,13 +74,17 @@ def start():
     processed files) and start the main loop.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", help="Configuration file")
-    parser.add_argument("-v", "--verbose", help="Verbose output", action="store_true")
+    parser.add_argument("-c", "--config_file",
+                        help="Configuration file")
+    parser.add_argument("-v", "--verbose",
+                        help="Verbose output",
+                        action="store_true")
     args = parser.parse_args()
 
     configFile = args.config_file
     verbose = args.verbose
-    config = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
+    config = ConfigParser(allow_no_value=True,
+                          interpolation=ExtendedInterpolation())
     config.optionxform = str
     config.read(configFile)
     config.configFile = configFile
@@ -125,7 +129,10 @@ def main(config, verbose=False):
 
     prov.agent(
         "GeoscienceAustralia",
-        {"prov:type": "prov:Organisation", "foaf:name": "Geoscience Australia"},
+        {
+            "prov:type": "prov:Organisation",
+            "foaf:name": "Geoscience Australia"
+        },
     )
 
     prov.agent(
@@ -156,9 +163,7 @@ def main(config, verbose=False):
         provlabel,
         starttime,
         endtime,
-        {
-            "dcterms:title": provtitle,
-            "dcterms:type": "void:Dataset"},
+        {"dcterms:title": provtitle, "dcterms:type": "void:Dataset"},
     )
     prov.actedOnBehalfOf(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
@@ -185,14 +190,16 @@ def LoadStationFile(config):
     stationFile = config.get("ObservationFiles", "StationFile")
     g_stations = gpd.read_file(stationFile)
     g_stations.set_index("stnNum", inplace=True)
-    prov.entity(":GeospatialStationData",
-                {
-                    "dcterms:type": "void:dataset",
-                    "dcterms:description": "Geospatial station information",
-                    "prov:atLocation": stationFile,
-                    "prov:GeneratedAt": flModDate(stationFile),
-                    "dcterms:format": "GeoJSON",
-                })
+    prov.entity(
+        ":GeospatialStationData",
+        {
+            "dcterms:type": "void:dataset",
+            "dcterms:description": "Geospatial station information",
+            "prov:atLocation": stationFile,
+            "prov:GeneratedAt": flModDate(stationFile),
+            "dcterms:format": "GeoJSON",
+        },
+    )
 
 
 def ListAllFiles(config):
@@ -328,13 +335,14 @@ def processFiles(config):
         ":DailyGustClassification",
         {
             "dcterms:type": "void:Dataset",
-            "dcterms:description": "Gust classification of daily max wind gust",
+            "dcterms:description": "Gust classification of daily max wind gust",  # noqa: E501
             "prov:atLocation": pjoin(outputDir, "gustratio"),
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT)
-        }
+            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+        },
     )
 
     prov.wasGeneratedBy(gustent, provlabel)
+
 
 def processFile(filename: str, config) -> bool:
     """

@@ -1,5 +1,6 @@
 """
-Calculate and plot the annual exceedance probability curves for each station, separated by storm type, and a combined curve.
+Calculate and plot the annual exceedance probability curves for each station,
+separated by storm type, and a combined curve.
 
 Storm classification completed in other scripts
 
@@ -21,19 +22,22 @@ from stndata import ONEMINUTESTNDTYPE, ONEMINUTESTNNAMES
 BASEDIR = r"..\data\allevents"
 OUTPUTPATH = pjoin(BASEDIR, "results")
 stormdf = pd.read_pickle(pjoin(OUTPUTPATH, "stormclass.pkl"))
-allstnfile = r"X:\georisk\HaRIA_B_Wind\data\raw\from_bom\2022\1-minute\HD01D_StationDetails.txt"
-allstndf = pd.read_csv(allstnfile, sep=',', index_col='stnNum',
-                       names=ONEMINUTESTNNAMES,
-                       keep_default_na=False,
-                       converters={
-                            'stnName': str.strip,
-                            'stnState': str.strip,
-                            'stnDataStartYear': lambda s: int(float(s.strip() or 0)),
-                            'stnDataEndYear': lambda s: int(float(s.strip() or 0))
-                        })
+allstnfile = r"X:\georisk\HaRIA_B_Wind\data\raw\from_bom\2022\1-minute\HD01D_StationDetails.txt"  # noqa E501
+allstndf = pd.read_csv(
+    allstnfile, sep=',',
+    index_col='stnNum',
+    names=ONEMINUTESTNNAMES,
+    keep_default_na=False,
+    converters={
+        'stnName': str.strip,
+        'stnState': str.strip,
+        'stnDataStartYear': lambda s: int(float(s.strip() or 0)),
+        'stnDataEndYear': lambda s: int(float(s.strip() or 0))
+    })
 
 # Calculate the time span that each station is open:
-allstndf['timespan'] = allstndf['stnDataEndYear'] - allstndf['stnDataStartYear']
+allstndf['timespan'] = allstndf['stnDataEndYear'] - allstndf['stnDataStartYear']  # noqa E501
+
 
 def loadDailyMaxData(stnNum: int) -> pd.DataFrame:
     """
@@ -41,7 +45,8 @@ def loadDailyMaxData(stnNum: int) -> pd.DataFrame:
 
     :param stnNum: Station identification number
     :type stnNum: int
-    :return: `pd.DataFrame` containing daily maximum wind gust data for the station, along with other variables associated with the gust event.
+    :return: `pd.DataFrame` containing daily maximum wind gust data for the
+    station, along with other variables associated with the gust event.
     :rtype: pd.DataFrame
     """
     try:
@@ -50,6 +55,7 @@ def loadDailyMaxData(stnNum: int) -> pd.DataFrame:
         print(f"No data for station {stnNum}")
     df = df.reset_index(drop=False).set_index(['stnNum', 'date'])
     return df
+
 
 def plotDistribution(stnNum, tsgust, tparams, sygust, sparams, outputpath):
     """
@@ -123,6 +129,7 @@ def plotReturnLevel(stnNum, tparams, sparams, intervals, outputpath):
     ax.set_xlabel("Return period [years]")
     ax.set_ylabel("Gust wind speed [km/h]")
 
+
 alldflist = []
 for stn in allstndf.index:
     if exists(pjoin(BASEDIR, 'dailymax', f"{stn:06d}.pkl")):
@@ -138,22 +145,49 @@ alldf.set_index(['stnNum', 'date'], inplace=True)
 
 datadf = stormdf.join(alldf, on=['stnNum', 'date'], how='inner')
 
-datadf.loc[(datadf.windgust>150) & (datadf.gustratio > 9.0) & (~datadf.stormType.isin(['Spike', 'Unclassified'])), 'stormType'] = 'Unclassified'
+datadf.loc[(datadf.windgust > 150) &
+           (datadf.gustratio > 9.0) &
+           (~datadf.stormType.isin(['Spike', 'Unclassified'])),
+           'stormType'] = 'Unclassified'
 
-tsGust = datadf.loc[datadf.stormType.isin(['Thunderstorm', 'Front up', 'Front down'])]
-synGust = datadf.loc[datadf.stormType.isin(['Synoptic storm', 'Synoptic front', 'Storm-burst'])]
+tsGust = datadf.loc[datadf.stormType.isin(
+    ['Thunderstorm', 'Front up', 'Front down'])]
+synGust = datadf.loc[datadf.stormType.isin(
+    ['Synoptic storm', 'Synoptic front', 'Storm-burst'])]
 
 tsgpdparams = pd.DataFrame(columns=['mu', 'xi', 'sigma'])
 syngpdparams = pd.DataFrame(columns=['mu', 'xi', 'sigma'])
 
 for stn, tmpdf in datadf.groupby('stnNum'):
     LOGGER.info(f"Processing {stn}")
-    tsgust = tmpdf.loc[tmpdf.stormType.isin(['Thunderstorm', 'Front up', 'Front down'])].values
-    sygust = tmpdf.loc[tmpdf.stormType.isin(['Synoptic storm', 'Synoptic front', 'Storm-burst'])].values
-    txi, tmu, tsigma = genpareto.fit(np.sort(tsgust),fc=-0.1, loc=tsgust.min())
-    tsgpdparams.loc[stn] = pd.Series({'mu': tmu, 'xi': txi, 'sigma': tsigma}, name=stn)
-    sxi, smu, ssigma = genpareto.fit(np.sort(sygust),fc=-0.1, loc=sygust.min())
-    syngpdparams.loc[stn] = pd.Series({'mu': smu, 'xi': sxi, 'sigma': ssigma}, name=stn)
+    tsgust = tmpdf.loc[tmpdf.stormType.isin(
+        ['Thunderstorm', 'Front up', 'Front down'])].values
+    sygust = tmpdf.loc[tmpdf.stormType.isin(
+        ['Synoptic storm', 'Synoptic front', 'Storm-burst'])].values
+    txi, tmu, tsigma = genpareto.fit(
+        np.sort(tsgust),
+        fc=-0.1,
+        loc=tsgust.min()
+        )
+    tsgpdparams.loc[stn] = pd.Series(
+        {
+            'mu': tmu,
+            'xi': txi,
+            'sigma': tsigma
+            },
+        name=stn)
+    sxi, smu, ssigma = genpareto.fit(
+        np.sort(sygust),
+        fc=-0.1,
+        loc=sygust.min()
+        )
+    syngpdparams.loc[stn] = pd.Series(
+        {
+            'mu': smu,
+            'xi': sxi,
+            'sigma': ssigma
+        },
+        name=stn)
 
     plotDistribution(stn, tsgust, sygust,
                      (txi, tmu, tsigma),

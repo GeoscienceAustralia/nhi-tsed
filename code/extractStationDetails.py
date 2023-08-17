@@ -1,7 +1,9 @@
 """
 extractStationDetails.py - extract station information from collection of files
 
-A PROV (provenance) file is written to the output folder, setting out the vaious entities created, sources, and the associations between them. See https://www.w3.org/TR/prov-primer/ for more details.
+A PROV (provenance) file is written to the output folder, setting out the
+vaious entities created, sources, and the associations between them. See
+https://www.w3.org/TR/prov-primer/ for more details.
 
 
 To run:
@@ -73,13 +75,23 @@ def start():
     processed files) and start the main loop.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", help="Configuration file")
-    parser.add_argument("-v", "--verbose", help="Verbose output", action="store_true")
+    parser.add_argument(
+        "-c", "--config_file",
+        help="Configuration file"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        help="Verbose output",
+        action="store_true"
+    )
     args = parser.parse_args()
 
     configFile = args.config_file
     verbose = args.verbose
-    config = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
+    config = ConfigParser(
+        allow_no_value=True,
+        interpolation=ExtendedInterpolation()
+    )
     config.optionxform = str
     config.read(configFile)
     config.configFile = configFile
@@ -121,7 +133,10 @@ def main(config, verbose=False):
 
     prov.agent(
         "GeoscienceAustralia",
-        {"prov:type": "prov:Organisation", "foaf:name": "Geoscience Australia"},
+        {
+            "prov:type": "prov:Organisation",
+            "foaf:name": "Geoscience Australia"
+        },
     )
 
     prov.agent(
@@ -318,7 +333,11 @@ def processStationFiles(config):
             "dcterms:format": "GeoJSON",
         },
     )
-    prov.wasGeneratedBy(geostnlist, provlabel, time=datetime.now().strftime(DATEFMT))
+    prov.wasGeneratedBy(
+        geostnlist,
+        provlabel,
+        time=datetime.now().strftime(DATEFMT)
+    )
 
     txtfile = pjoin(outputDir, "StationDetails.txt")
     gdf_stations.reset_index()[ONEMINUTESTNNAMES].to_csv(txtfile, index=False)
@@ -332,7 +351,11 @@ def processStationFiles(config):
             "dcterms:format": "csv",
         },
     )
-    prov.wasGeneratedBy(txtstnlist, provlabel, time=datetime.now().strftime(DATEFMT))
+    prov.wasGeneratedBy(
+        txtstnlist,
+        provlabel,
+        time=datetime.now().strftime(DATEFMT)
+    )
 
 
 def getStationList(stnfile: str) -> pd.DataFrame:

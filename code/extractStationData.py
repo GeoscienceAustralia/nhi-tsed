@@ -19,9 +19,14 @@ option set to `False`.
 Processed files can be archived once processed. Set the `ArchiveWhenProcessed`
 option to `True` and define `ArchiveDir` as a writable path.
 
-Station data details are written to a GeoJSON file that can be used to create a feature class in ArcGIS Pro. We use GeoJSON as it retains the fully qualified field names for all fields - saving to Esri shape file will truncate field names.
+Station data details are written to a GeoJSON file that can be used to create
+a feature class in ArcGIS Pro. We use GeoJSON as it retains the fully qualified
+field names for all fields - saving to Esri shape file will truncate field
+names.
 
-A PROV (provenance) file is written to the output folder, setting out the vaious entities created, sources, and the associations between them. See https://www.w3.org/TR/prov-primer/ for more details.
+A PROV (provenance) file is written to the output folder, setting out the
+various entities created, sources, and the associations between them.
+See https://www.w3.org/TR/prov-primer/ for more details.
 
 
 To run:
@@ -92,13 +97,23 @@ def start():
     processed files) and start the main loop.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", help="Configuration file")
-    parser.add_argument("-v", "--verbose", help="Verbose output", action="store_true")
+    parser.add_argument(
+        "-c", "--config_file",
+        help="Configuration file"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        help="Verbose output",
+        action="store_true"
+    )
     args = parser.parse_args()
 
     configFile = args.config_file
     verbose = args.verbose
-    config = ConfigParser(allow_no_value=True, interpolation=ExtendedInterpolation())
+    config = ConfigParser(
+        allow_no_value=True,
+        interpolation=ExtendedInterpolation()
+    )
     config.optionxform = str
     config.read(configFile)
     config.configFile = configFile
@@ -141,7 +156,10 @@ def main(config, verbose=False):
 
     prov.agent(
         "GeoscienceAustralia",
-        {"prov:type": "prov:Organisation", "foaf:name": "Geoscience Australia"},
+        {
+            "prov:type": "prov:Organisation",
+            "foaf:name": "Geoscience Australia"
+        },
     )
 
     prov.agent(
@@ -162,7 +180,6 @@ def main(config, verbose=False):
             "prov:atLocation": os.path.basename(config.configFile),
         },
     )
-
 
     ListAllFiles(config)
     LoadStationFile(config)
@@ -210,6 +227,7 @@ def LoadStationFile(config):
                     "prov:GeneratedAt": flModDate(stationFile),
                     "dcterms:format": "GeoJSON",
                 })
+
 
 def ListAllFiles(config):
     """
@@ -364,7 +382,7 @@ def processFiles(config):
         ":stormEventData",
         {
             "dcterms:type": "void:Dataset",
-            "dcterms:description": "Weather observations around daily max wind gust",
+            "dcterms:description": "Weather observations around daily max wind gust",  # noqa: E501
             "prov:atLocation": pjoin(outputDir, "events"),
             "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
         },
@@ -410,7 +428,12 @@ def processFile(filename: str, config) -> bool:
 
         basename = f"{stnNum:06d}.{ext}"  # os.path.basename(filename)
         dfmax, dfmean, eventdf = extractDailyMax(
-            filename, stnState, stnName, stnNum, "windgust", threshold=threshold
+            filename,
+            stnState,
+            stnName,
+            stnNum,
+            "windgust",
+            threshold=threshold
         )
         if dfmax is None:
             LOGGER.warning(f"No data returned for {filename}")
@@ -434,7 +457,7 @@ def processFile(filename: str, config) -> bool:
                     {
                         "dcterms:type": "void:dataset",
                         "dcterms:description": "Gust event information",
-                        "prov:atLocation": pjoin(outputDir, "events", basename),
+                        "prov:atLocation": pjoin(outputDir, "events", basename),  # noqa: E501
                         "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
                         "dcterms:format": outputFormat,
                     },
@@ -620,9 +643,7 @@ def extractDailyMax(
             )
             deltavals = df.loc[startdt:enddt].index - idx
             gustdf = df.loc[startdt:enddt].set_index(deltavals)
-            pct = (
-                (gustdf.isnull() | gustdf.isna()).sum() * 100 / gustdf.index.size
-            )  # noqa: E501
+            pct = ((gustdf.isnull() | gustdf.isna()).sum() * 100 / gustdf.index.size)  # noqa: E501
             qccols = ["windgust", "temp", "stnp", "winddir", "dewpoint"]
             if np.any(pct[qccols] > 20.0):
                 LOGGER.info(
