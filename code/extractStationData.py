@@ -47,7 +47,6 @@ import numpy as np
 from prov.model import ProvDocument
 from metpy.calc import wind_components
 from metpy.units import units
-
 import warnings
 
 from process import pAlreadyProcessed, pWriteProcessedFile, pArchiveFile, pInit
@@ -392,9 +391,9 @@ def processFile(filename: str, config) -> bool:
 
     outputDir = config.get("Output", "Path")
     threshold = config.getfloat("ObservationFiles", "Threshold")
-
     ext = "pkl" if outputFormat == "pickle" else "csv"
     outfunc = "to_pickle" if outputFormat == "pickle" else "to_csv"
+
     LOGGER.info(f"Loading data from {filename}")
     LOGGER.debug(f"Data will be written to {outputDir}")
     LOGGER.debug(f"Using {outputFormat} for output data")

@@ -347,6 +347,7 @@ stormclasses = [
     .to_excel(pjoin(r"..\data\training", "crosstab.xlsx"))
 )
 
+
 allstnfile = r"X:\georisk\HaRIA_B_Wind\data\raw\from_bom\2022\1-minute\HD01D_StationDetails.txt"  # noqa
 
 allstndf = pd.read_csv(

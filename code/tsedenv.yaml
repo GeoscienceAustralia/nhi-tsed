@@ -19,4 +19,5 @@ dependencies:
   - cartopy
   - scikit-learn
   - metpy
+  - pycodestyle
 prefix: C:\W10Dev\Anaconda3\envs\sktime
