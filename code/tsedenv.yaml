@@ -1,4 +1,4 @@
-name: sktime
+name: tsed
 channels:
   - conda-forge
   - defaults
