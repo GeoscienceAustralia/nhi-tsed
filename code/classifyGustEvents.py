@@ -35,7 +35,8 @@ import numpy as np
 import warnings
 
 from process import pAlreadyProcessed, pWriteProcessedFile, pArchiveFile, pInit
-from files import flStartLog, flGetStat, flSize, flGitRepository, flModDate
+from files import flStartLog, flGetStat, flSize, flGitRepository
+from files import flModDate, flPathTime
 from stndata import ONEMINUTESTNNAMES, ONEMINUTEDTYPE, ONEMINUTENAMES
 
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -57,6 +58,8 @@ TZ = {
 
 DATEFMT = "%Y-%m-%d %H:%M:%S"
 
+starttime = datetime.now().strftime(DATEFMT)
+commit, tag, dt, url = flGitRepository(sys.argv[0])
 prov = ProvDocument()
 prov.set_default_namespace("")
 prov.add_namespace("prov", "http://www.w3.org/ns/prov#")
@@ -66,6 +69,42 @@ prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 provlabel = ":stormGustClassification"
 provtitle = "Storm gust classification"
+
+codeent = prov.entity(
+    sys.argv[0],
+    {
+        "dcterms:type": "prov:SoftwareAgent",
+        "prov:Revision": commit,
+        "prov:tag": tag,
+        "dcterms:date": dt,
+        "prov:url": url,
+    },
+)
+
+pandasent = prov.entity(
+    "pandas",
+    {
+        "prov:Revision": pd.__version__,
+        "prov:url": "https://doi.org/10.5281/zenodo.3509134"
+    }
+)
+
+# We use the current user as the primary agent:
+useragent = prov.agent(
+    f":{getpass.getuser()}",
+    {"prov:type": "prov:Person"}
+    )
+
+orgagent = prov.agent(
+    "GeoscienceAustralia",
+    {
+        "prov:type": "prov:Organisation",
+        "foaf:name": "Geoscience Australia"
+    },
+)
+
+prov.wasAssociatedWith(codeent, useragent)
+prov.actedOnBehalfOf(useragent, orgagent)
 
 
 def start():
@@ -255,13 +294,37 @@ def expandFileSpec(config, spec, category):
     origindir = config.get(
         category, "OriginDir", fallback=config.get("Defaults", "OriginDir")
     )
-    spec = pjoin(origindir, spec)
-    files = glob.glob(spec)
+    dirmtime = flPathTime(origindir)
+    specent = prov.collection(
+        f":{spec}",
+        {
+            "dcterms:type": "prov:Collection",
+            "dcterms:title": category,
+            "prov:atLocation": origindir,
+            "prov:GeneratedAt": dirmtime,
+        },
+    )
+    prov.used(provlabel, specent)
+    prov.wasAttributedTo(specent, "BureauOfMeteorology")
+    specpath = pjoin(origindir, spec)
+    files = glob.glob(specpath)
+    entities = []
     LOGGER.info(f"{len(files)} {spec} files to be processed")
     for file in files:
         if os.stat(file).st_size > 0:
             if file not in g_files[category]:
                 g_files[category].append(file)
+                entities.append(
+                    prov.entity(
+                        f":{os.path.basename(file)}",
+                        {
+                            "prov:atLocation": origindir,
+                            "dcterms:created": flModDate(file),
+                        },
+                    )
+                )
+    for entity in entities:
+        prov.hadMember(specent, entity)
 
 
 def expandFileSpecs(config, specs, category):
@@ -307,8 +370,6 @@ def processFiles(config):
     outputDir = config.get("Output", "Path", fallback=unknownDir)
     LOGGER.debug(f"DeleteWhenProcessed: {deleteWhenProcessed}")
     LOGGER.debug(f"Output directory: {outputDir}")
-    if not os.path.exists(unknownDir):
-        os.mkdir(unknownDir)
 
     if not os.path.exists(pjoin(outputDir, "gustratio")):
         os.makedirs(pjoin(outputDir, "gustratio"))
