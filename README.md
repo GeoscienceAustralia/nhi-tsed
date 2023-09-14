@@ -60,7 +60,7 @@ Original source data can be requested from the Bureau of Meteorology, Climate Da
 
 1. `extractStationDetails.py` - extract station details from the raw data. Creates a geojson file of station locations used in subsequent scripts
 2. `extractStationData.py` - extract all events from the raw data. This should be executed twice, initially with a threshold of 90 km/h and again with a threshold of 60 km/h. The outputs for each execution need to be stored in different folders. Users will need to check the path to the original source files (`OriginDir` in the configuration files.)
-3. `selectHQStations.ipynb`
+3. `selectHQStations.ipynb` - use this to select high-quality stations that will form the training dataset for the ML classification process
 4. `classifyGustEvents.py` - classifies all daily maximum wind gusts using El Rafei et al. (2023)[^5]
 5. `ClassifyEvents.ipynb` - interactive notebook to visually classify storms with maximum gust > 90 km/h at high-quality stations
 6. `classifyTimeSeries.py` - use ML approach in `sktime` to classify all storm events (> 60 km/h) [^4]
