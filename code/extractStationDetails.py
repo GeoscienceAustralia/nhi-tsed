@@ -290,7 +290,7 @@ def processStationFiles(config):
     LOGGER.debug(f"DeleteWhenProcessed: {deleteWhenProcessed}")
     LOGGER.debug(f"Output directory: {outputDir}")
     if not os.path.exists(unknownDir):
-        os.mkdir(unknownDir)
+        os.makedirs(unknownDir)
 
     stnlist = []
     category = "StationFiles"

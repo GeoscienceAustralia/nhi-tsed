@@ -331,11 +331,10 @@ def processFiles(config):
     outputDir = config.get("Output", "Path", fallback=unknownDir)
     LOGGER.debug(f"DeleteWhenProcessed: {deleteWhenProcessed}")
     LOGGER.debug(f"Output directory: {outputDir}")
-    if not os.path.exists(unknownDir):
-        os.mkdir(unknownDir)
 
     if not os.path.exists(outputDir):
-        os.mkdir(outputDir)
+        os.makedirs(outputDir)
+    if not os.path.exists(pjoin(outputDir, "dailymax")):
         os.mkdir(pjoin(outputDir, "dailymax"))
         os.mkdir(pjoin(outputDir, "dailymean"))
         os.mkdir(pjoin(outputDir, "plots"))
