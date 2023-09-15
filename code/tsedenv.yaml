@@ -1,4 +1,4 @@
-name: sktime
+name: tsed
 channels:
   - conda-forge
   - defaults
@@ -9,11 +9,14 @@ dependencies:
   - matplotlib
   - pandas
   - pytz
+  - lxml
+  - prov
   - seaborn
   - sktime-all-extras
   - gitpython
+  - fiona
   - geopandas
   - cartopy
   - scikit-learn
   - metpy
-prefix: C:\W10Dev\Anaconda3\envs\sktime
+  - pycodestyle
