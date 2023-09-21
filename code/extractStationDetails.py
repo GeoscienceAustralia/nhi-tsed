@@ -372,9 +372,16 @@ def getStationList(stnfile: str) -> pd.DataFrame:
         sep=",",
         index_col="stnNum",
         names=ONEMINUTESTNNAMES,
+        na_values=['','    ', '     '],
         keep_default_na=False,
-        converters={"stnName": str.strip, "stnState": str.strip},
+        converters={
+            "stnName": str.strip,
+            "stnState": str.strip,
+            "stnLoc": str.strip,
+            }
     )
+    df['stnDataStartYear'] = df['stnDataStartYear'].astype('Int64')
+    df['stnDataEndYear'] = df['stnDataEndYear'].astype('Int64')
     LOGGER.debug(f"There are {len(df)} stations")
     return df
 
