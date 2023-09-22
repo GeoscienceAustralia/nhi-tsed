@@ -372,7 +372,7 @@ def getStationList(stnfile: str) -> pd.DataFrame:
         sep=",",
         index_col="stnNum",
         names=ONEMINUTESTNNAMES,
-        na_values=['','    ', '     '],
+        na_values=['', '    ', '     '],
         keep_default_na=False,
         converters={
             "stnName": str.strip,
