@@ -16,6 +16,11 @@ characterisation of extreme wind gust hazards in New South Wales,
 Australia. *Nat Hazards*, **117**, 875–895,
 https://doi.org/10.1007/s11069-023-05887-1.
 
+
+To run:
+
+python classifyGustEvents.py -c classifyGustEvents.ini
+
 """
 
 import os
