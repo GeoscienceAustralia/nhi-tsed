@@ -733,4 +733,5 @@ def windComponents(windspd, winddir):
     vanom = v.magnitude - np.nanmean(v.magnitude)
     return u.magnitude, v.magnitude, uanom, vanom
 
+
 start()
