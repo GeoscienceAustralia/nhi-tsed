@@ -8,32 +8,28 @@ https://www.w3.org/TR/prov-primer/ for more details.
 
 To run:
 
-python extractStationData.py -c extract_station_data.ini
+python extractStationDetails.py -c extract_station_details.ini
 
 """
 
 import os
 import re
 import sys
-import time
 import glob
 import argparse
 import getpass
 import logging
 from os.path import join as pjoin
-from datetime import datetime, timedelta
+from datetime import datetime
 from configparser import ConfigParser, ExtendedInterpolation
 import pandas as pd
 import geopandas as gpd
-import numpy as np
 from prov.model import ProvDocument
-from metpy.calc import wind_components
-from metpy.units import units
 
 import warnings
 
 from process import pAlreadyProcessed, pWriteProcessedFile, pArchiveFile, pInit
-from files import flStartLog, flGetStat, flSize, flGitRepository
+from files import flStartLog, flGetStat, flGitRepository
 from files import flModDate, flPathTime
 from stndata import ONEMINUTESTNNAMES
 
