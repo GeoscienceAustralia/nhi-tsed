@@ -34,6 +34,9 @@ import geopandas as gpd
 import numpy as np
 import warnings
 
+from metpy.calc import relative_humidity_from_dewpoint as dp2rh
+from metpy.units import units
+
 from process import pAlreadyProcessed, pWriteProcessedFile, pArchiveFile, pInit
 from files import flStartLog, flGetStat, flSize, flGitRepository
 from files import flModDate, flPathTime
@@ -488,24 +491,28 @@ def extractGustRatio(filename, stnState, variable="windgust"):
     except Exception as err:
         LOGGER.exception(f"Cannot load data from {filename}: {err}")
         return None
+    df['rh'] = dp2rh(
+        df['temp'].values * units.degC,
+        df['dewpoint'].values * units.degC
+        ).to('percent').magnitude
 
     LOGGER.debug("Filtering on quality flags")
     for var in [
         "temp",
         "temp1max",
         "temp1min",
-        "wbtemp",
         "dewpoint",
-        "rh",
         "windspd",
         "windmin",
         "winddir",
-        "windsd",
         "windgust",
         "mslp",
         "stnp",
     ]:
-        df.loc[~df[f"{var}q"].isin(["Y"]), [var]] = np.nan
+        try:
+            df.loc[~df[f"{var}q"].isin(["Y"]), [var]] = np.nan
+        except KeyError as kerr:
+            LOGGER.exception(f"Missing {kerr} from data")
 
     # Hacky way to convert from local standard time to UTC:
     df["datetimeLST"] = pd.to_datetime(df.datetime, format="%Y %m %d %H %M")
