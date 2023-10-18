@@ -193,7 +193,7 @@ def main(config, verbose=False):
             "dcterms:title": provtitle,
             "dcterms:type": "void:Dataset"},
     )
-    prov.actedOnBehalfOf(extractionact, f":{getpass.getuser()}")
+    prov.wasAttributedTo(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
     prov.used(provlabel, configent)
     prov.used(provlabel, ":GeospatialStationData")

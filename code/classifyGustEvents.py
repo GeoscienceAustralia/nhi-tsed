@@ -106,7 +106,7 @@ orgagent = prov.agent(
     },
 )
 
-prov.wasAssociatedWith(codeent, useragent)
+prov.wasAttributedTo(codeent, useragent)
 prov.actedOnBehalfOf(useragent, orgagent)
 
 
@@ -207,7 +207,7 @@ def main(config, verbose=False):
         endtime,
         {"dcterms:title": provtitle, "dcterms:type": "void:Dataset"},
     )
-    prov.actedOnBehalfOf(extractionact, f":{getpass.getuser()}")
+    prov.wasAssociatedWith(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
     prov.used(provlabel, configent)
     prov.used(provlabel, ":GeospatialStationData")
