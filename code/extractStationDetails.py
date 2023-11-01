@@ -308,7 +308,8 @@ def processStationFiles(config):
     try:
         g_stations = pd.concat(stnlist)
     except ValueError:
-        LOGGER.error("No station data to process - check if files have already been processed")
+        LOGGER.error("No station data to process")
+        LOGGER.error("Check if files have already been processed")
         sys.exit(1)
 
     LOGGER.debug("Creating GeoDataFrame for station data")
