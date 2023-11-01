@@ -305,9 +305,12 @@ def processStationFiles(config):
                 pArchiveFile(f)
             elif deleteWhenProcessed:
                 os.unlink(f)
-
-    g_stations = pd.concat(stnlist)
-
+    try:
+        g_stations = pd.concat(stnlist)
+    except ValueError:
+        LOGGER.error("No station data to process - check if files have already been processed")
+        sys.exit(1)
+    breakpoint()
     LOGGER.debug("Creating GeoDataFrame for station data")
     gdf_stations = gpd.GeoDataFrame(
         data=g_stations,
@@ -378,6 +381,7 @@ def getStationList(stnfile: str) -> pd.DataFrame:
     )
     df['stnDataStartYear'] = df['stnDataStartYear'].astype('Int64')
     df['stnDataEndYear'] = df['stnDataEndYear'].astype('Int64')
+    df['stnWMOIndex'] = df['stnWMOIndex'].astype('Int64')
     LOGGER.debug(f"There are {len(df)} stations")
     return df
 
