@@ -310,7 +310,7 @@ def processStationFiles(config):
     except ValueError:
         LOGGER.error("No station data to process - check if files have already been processed")
         sys.exit(1)
-    breakpoint()
+
     LOGGER.debug("Creating GeoDataFrame for station data")
     gdf_stations = gpd.GeoDataFrame(
         data=g_stations,
