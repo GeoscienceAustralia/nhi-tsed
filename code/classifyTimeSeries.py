@@ -98,6 +98,7 @@ prov.actedOnBehalfOf(useragent, orgagent)
 BASEDIR = r"..\data"
 TRAINDIR = pjoin(BASEDIR, "training")
 OUTPUTPATH = pjoin(BASEDIR, "allevents", "results")
+PLOTPATH = pjoin(BASEDIR, "allevents", "plots")
 LOGGER = flStartLog(r"..\output\classifyTimeSeries.log", "INFO", verbose=True)
 hqstndf = pd.read_csv(pjoin(BASEDIR, "hqstations.csv"), index_col="stnNum")
 fullStationFile = pjoin(BASEDIR, "StationDetails.geojson")
@@ -272,7 +273,7 @@ def plotEvent(df: pd.DataFrame, stormType: str):
         ha="right",
         va="top",
     )
-    plt.savefig(pjoin(OUTPUTPATH, f"{stormType}.png"), bbox_inches="tight")
+    plt.savefig(pjoin(PLOTPATH, f"{stormType}.png"), bbox_inches="tight")
 
 
 # Load all the events into a single dataframe. We'll then pick out the events
@@ -284,52 +285,55 @@ for stn in hqstndf.index:
     df = loadData(stn, TRAINDIR)
     dflist.append(df)
 
+# Visual classification dataframe:
 vcdf = pd.concat(dflist)
 vcdf["idx"] = vcdf.index
-
-
-# Split into a preliminary training and test dataset:
-LOGGER.info("Splitting the visually classified data into test and train sets")
-eventdf_train = vcdf.loc[train_storms.index]
-eventdf_test = vcdf.loc[test_storms.index]
 
 vars = ["windgust", "tempanom", "stnpanom", "dpanom"]
 nvars = len(vars)
 
 # Apply a standard scaler (zero mean and unit variance):
+scaler = StandardScaler()
+vcdf[vars] = scaler.fit_transform(vcdf[vars].values)
 
-# testscaler = StandardScaler()
-# eventdf_train[vars] = testscaler.fit_transform(eventdf_train[vars].values)
-# eventdf_test[vars] = testscaler.transform(eventdf_test[vars].values)
-fullscaler = StandardScaler()
-vcdf[vars] = fullscaler.fit_transform(vcdf[vars].values)
+# Split into a preliminary training and test dataframes:
+LOGGER.info("Splitting the visually classified data into test and train sets")
+traindf = vcdf.loc[train_storms.index]
+testdf = vcdf.loc[test_storms.index]
 
-X = eventdf_train.reset_index().set_index(["idx", "tdiff"])[vars]
-XX = np.moveaxis(X.values.reshape((ntrain, 121, nvars)), 1, -1)
+trainset = traindf.reset_index().set_index(["idx", "tdiff"])[vars]
+trainarray = np.moveaxis(trainset.values.reshape((ntrain, 121, nvars)), 1, -1)
 y = np.array(train_storms["stormType"].values)
 
-X_test = eventdf_test.reset_index().set_index(["idx", "tdiff"])[vars]
-XX_test = np.moveaxis(X_test.values.reshape((200, 121, nvars)), 1, -1)
+testset = testdf.reset_index().set_index(["idx", "tdiff"])[vars]
+testarray = np.moveaxis(testset.values.reshape((200, 121, nvars)), 1, -1)
 
 # Here we use the full set of visually classified events for training
 # the classifier:
-fulltrain = vcdf.loc[stormdf.index].reset_index().set_index(["idx", "tdiff"])[vars]  # noqa: E501
+fulltrain = (
+    vcdf.loc[stormdf.index].
+    reset_index().
+    set_index(["idx", "tdiff"])[vars])
+
+# noqa: E501
 fulltrainarray = np.moveaxis(
     (fulltrain.values.reshape((len(stormdf), 121, nvars))), 1, -1
 )
 
 # Create array of storm types from the visually classified data:
 fully = np.array(
-    list(stormdf.loc[fulltrain.reset_index()["idx"].unique()]["stormType"].values)  # noqa: E501
+    list(stormdf.loc[
+        fulltrain.reset_index()["idx"].unique()
+        ]["stormType"].values)  # noqa: E501
 )
 
 # First start with the training set:
 LOGGER.info("Running the training set with 10,000 kernels")
 rocket = RocketClassifier(num_kernels=10000)
-rocket.fit(XX, y)
-y_pred = rocket.predict(XX_test)
+rocket.fit(trainarray, y)
+y_pred = rocket.predict(testarray)
 results = pd.DataFrame(data={"prediction": y_pred, "visual": test_storms["stormType"]})  # noqa: E501
-score = rocket.score(XX_test, test_storms["stormType"])
+score = rocket.score(testarray, test_storms["stormType"])
 LOGGER.info(f"Accuracy of the classifier for the training set: {score}")
 
 # Now run the classifier on the full event set:
@@ -384,7 +388,8 @@ for stn in allstndf.index:
 
 alldatadf = pd.concat(alldatadflist)
 alldatadf["idx"] = alldatadf.index
-alldatadf[vars] = fullscaler.transform(alldatadf[vars].values)
+
+alldatadf[vars] = scaler.transform(alldatadf[vars].values)
 allX = alldatadf.reset_index().set_index(["idx", "tdiff"])[vars]
 
 naidx = []
@@ -407,7 +412,7 @@ LOGGER.info(f"Running the classifier for all {nstorms} events")
 stormclass = rocket.predict(allXX)
 
 LOGGER.info("Reset the scaling to plot data")
-allXupdate[vars] = fullscaler.inverse_transform(allXupdate[vars])
+allXupdate[vars] = scaler.inverse_transform(allXupdate[vars])
 
 outputstormdf = pd.DataFrame(
     data={"stormType": stormclass},
@@ -439,14 +444,14 @@ plt.text(
     ha="right",
     va="top",
 )
-plt.savefig(pjoin(OUTPUTPATH, "stormcounts.png"), bbox_inches="tight")
+plt.savefig(pjoin(PLOTPATH, "stormcounts.png"), bbox_inches="tight")
 stormcountfig = prov.entity(
     ":stormCountFigure",
     {
         "dcterms:titile": "Storm count figure",
         "dcterms:type": "Figure",
         "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-        "prov:atLocation": pjoin(OUTPUTPATH, "stormcounts.png"),
+        "prov:atLocation": pjoin(PLOTPATH, "stormcounts.png"),
     },
 )
 
@@ -459,7 +464,7 @@ for storm in stormclasses:
     LOGGER.info(f"Plotting mean profile for {storm} class events")
     stidx = outputstormdf[outputstormdf["stormType"] == storm].index
     stevents = allXupdate[allXupdate.index.get_level_values("idx").isin(stidx)]
-    meanst = stevents.groupby("tdiff").mean().reset_index()
+    meanst = stevents.groupby("tdiff").mean(numeric_only=True).reset_index()
     plotEvent(meanst, storm)
     pltent = prov.entity(
         f":mean{storm}Class",
@@ -467,13 +472,13 @@ for storm in stormclasses:
             "dcterms:title": f"Mean storm profile for {storm}",
             "dcterms:type": "Figure",
             "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-            "prov:atLocation": pjoin(OUTPUTPATH, f"{storm}.png"),
+            "prov:atLocation": pjoin(PLOTPATH, f"{storm}.png"),
         },
     )
     pltact = prov.activity(
         f":plotMean{storm}",
         datetime.now().strftime(DATEFMT)
-        )
+    )
     pltents.append(pltent)
     pltacts.append(pltact)
 
