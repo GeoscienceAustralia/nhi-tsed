@@ -556,11 +556,16 @@ def extractDailyMax(
     ]:
         df.loc[~df[f"{var}q"].isin(["Y"]), [var]] = np.nan
 
+    # Have to do rainfall outside this loop, since the quality flag column
+    # name is different to the variable name:
+    df.loc[~df["rainq"].isin(["Y"]), ["rainfall"]] = np.nan
+
     # Hacky way to convert from local standard time (LST) to UTC:
     df["datetimeLST"] = pd.to_datetime(df.datetimeLST, format="%Y %m %d %H %M")
     LOGGER.debug("Converting from local to UTC time")
     df["datetime"] = df.datetimeLST - timedelta(hours=TZ[stnState])
     df["date"] = df.datetime.dt.date
+
     # First have to set the datetime as index, then localize to UTC:
     df.set_index("datetime", inplace=True)
     df.set_index(df.index.tz_localize(tz="UTC"), inplace=True)
@@ -579,6 +584,8 @@ def extractDailyMax(
             "prsdrop",
             "prsrise",
             "emergence",
+            "prerain",
+            "postrain",
         ],
         index=dfmax.index,
     )
@@ -594,6 +601,7 @@ def extractDailyMax(
         meangust = df.loc[startdt:enddt]["windgust"].mean()
         pretemp = df.loc[startdt:idx]["temp"].mean()
         posttemp = df.loc[idx:enddt]["temp"].mean()
+        # Rolling 30-minute window temperature change:
         tempchange = (
             df.loc[startdt:enddt]
             .rolling("1800s")["temp"]
@@ -617,10 +625,17 @@ def extractDailyMax(
             .max()
         )
 
-        # Emergence: ratio of highest gust to average of next 10 highest
+        # Rainfall preceding and following peak gust:
+        predf = df.loc[startdt:idx]
+        postdf = df.loc[idx:enddt]
+        # Exclude any obs where the rain quality is not 'Y':
+        prerain = predf.where(predf.rainq.isin(['Y']))["rainfall"].sum(numeric_only=True)  # noqa
+        postrain = postdf.where(postdf.rainq.isin(['Y']))["rainfall"].sum(numeric_only=True)  # noqa
+
+        # Emergence: ratio of highest gust to average of next 10 highest gusts
         emerg = (
             maxgust / df.loc[startdt:enddt]["windgust"].nlargest(11)[1:].mean()
-        )  # noqa: E501
+        )
         dfdata.loc[idx] = [
             maxgust / meangust,
             pretemp,
@@ -631,6 +646,8 @@ def extractDailyMax(
             prsdrop,
             prsrise,
             emerg,
+            prerain,
+            postrain,
         ]
 
         if maxgust > threshold:
