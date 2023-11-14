@@ -442,8 +442,6 @@ def processFile(filename: str, config) -> bool:
             getattr(dfmax, outfunc)(pjoin(outputDir, "dailymax", basename))
             getattr(dfmean, outfunc)(pjoin(outputDir, "dailymean", basename))
 
-            dfmax.to_pickle(pjoin(outputDir, "dailymax", basename))
-            dfmean.to_pickle(pjoin(outputDir, "dailymean", basename))
             if eventdf is not None:
                 LOGGER.debug(
                     f"Writing data to {pjoin(outputDir, 'events', basename)}"
