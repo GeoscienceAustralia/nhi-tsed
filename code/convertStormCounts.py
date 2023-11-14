@@ -13,6 +13,7 @@ import geopandas as gpd
 from stndata import ONEMINUTESTNNAMES
 
 from prov.model import ProvDocument
+from prov.dot import prov_to_dot
 
 from files import flStartLog, flGitRepository
 from files import flModDate
@@ -35,7 +36,7 @@ BASEDIR = r"..\data\allevents"
 OUTPUTPATH = pjoin(BASEDIR, "results")
 LOGGER = flStartLog(r"..\output\convertStormCounts.log", "INFO", verbose=True)
 
-LOGGER.info(f"Loading storm classifications from {pjoin(OUTPUTPATH, 'stormclass.pkl')}")
+LOGGER.info(f"Loading storm classifications from {pjoin(OUTPUTPATH, 'stormclass.pkl')}")  # noqa
 df = pd.read_pickle(pjoin(OUTPUTPATH, "stormclass.pkl"))
 
 fullStationFile = pjoin(r"..\data", "StationDetails.geojson")
@@ -91,20 +92,6 @@ orgagent = prov.agent(
 
 prov.wasAssociatedWith(codeent, useragent)
 prov.actedOnBehalfOf(useragent, orgagent)
-
-"""
-allstnfile = r"X:\georisk\HaRIA_B_Wind\data\raw\from_bom\2022\1-minute\HD01D_StationDetails.txt"  # noqa
-allstndf = pd.read_csv(
-    allstnfile, sep=',', index_col='stnNum',
-    names=ONEMINUTESTNNAMES,
-    keep_default_na=False,
-    converters={
-        'stnName': str.strip,
-        'stnState': str.strip,
-        'stnDataStartYear': lambda s: int(float(s.strip() or 0)),
-        'stnDataEndYear': lambda s: int(float(s.strip() or 0))
-    })
-"""
 
 # Assume both the start and end year have data:
 LOGGER.debug("Calculating time span for stations")
@@ -171,11 +158,11 @@ prov.wasDerivedFrom(propent, classent)
 
 LOGGER.info("Plotting maps of storm type proportions")
 # Note: cartopy is imported here to avoid a conflict with geopandas/GDAL
-from cartopy import crs as ccrs
-import matplotlib.pyplot as plt
-import matplotlib
+from cartopy import crs as ccrs  # noqa
+import matplotlib.pyplot as plt  # noqa
+import matplotlib  # noqa
 matplotlib.rcParams['font.sans-serif'] = 'Arial'
-import cartopy.feature as cfeature
+import cartopy.feature as cfeature  # noqa
 
 states = cfeature.NaturalEarthFeature(
         category='cultural',
@@ -236,12 +223,14 @@ gl.right_labels = False
 gax.set_title("Convective storm rate")
 plt.text(1.0, -0.05, f"Created: {datetime.now():%Y-%m-%d %H:%M %z}",
          transform=gax.transAxes, ha='right')
-plt.savefig(pjoin(OUTPUTPATH, "convectiverate_map.png"), bbox_inches='tight')
+convFig = pjoin(OUTPUTPATH, "convectiverate_map.png")
+plt.savefig(convFig, bbox_inches='tight')
 plt.close()
 
 gax = plt.axes(projection=ccrs.PlateCarree())
 gax.figure.set_size_inches(15, 12)
-gdf.plot(column='Non-convectiveRate', legend=True, scheme='quantiles',
+gdf.plot(column='Non-convectiveRate',
+         legend=True, scheme='quantiles',
          k=7, ax=gax)
 
 gax.coastlines(resolution='10m')
@@ -253,8 +242,8 @@ gl.right_labels = False
 gax.set_title("Non-convective storm rate")
 plt.text(1.0, -0.05, f"Created: {datetime.now():%Y-%m-%d %H:%M %z}",
          transform=gax.transAxes, ha='right')
-plt.savefig(pjoin(OUTPUTPATH, "nonconvectiverate_map.png"),
-            bbox_inches='tight')
+nonconvFig = pjoin(OUTPUTPATH, "nonconvectiverate_map.png")
+plt.savefig(nonconvFig, bbox_inches='tight')
 plt.close()
 
 prov.entity(
@@ -262,8 +251,8 @@ prov.entity(
     {
         "dcterms:type": "void:dataset",
         "dcterms:description": "Convective storm rate map",
-        "prov:atLocation": pjoin(OUTPUTPATH, "convectiverate_map.png"),
-        "prov:GeneratedAt": flModDate(pjoin(OUTPUTPATH, "convectiverate_map.png")),
+        "prov:atLocation": convFig,
+        "prov:GeneratedAt": flModDate(convFig),
         "dcterms:format": "PNG",
     }
 )
@@ -273,8 +262,8 @@ prov.entity(
     {
         "dcterms:type": "void:dataset",
         "dcterms:description": "Non-convective storm rate map",
-        "prov:atLocation": pjoin(OUTPUTPATH, "nonconvectiverate_map.png"),
-        "prov:GeneratedAt": flModDate(pjoin(OUTPUTPATH, "nonconvectiverate_map.png")),
+        "prov:atLocation": nonconvFig,
+        "prov:GeneratedAt": flModDate(nonconvFig),
         "dcterms:format": "PNG",
     }
 )
@@ -292,6 +281,5 @@ prov.wasDerivedFrom(":convectiveRateMap", propent)
 prov.wasGeneratedBy(":nonconvectiveRateMap", conv)
 prov.wasDerivedFrom(":nonconvectiveRateMap", propent)
 prov.serialize(pjoin(OUTPUTPATH, "conversion.xml"), format="xml")
-from prov.dot import prov_to_dot
 dot = prov_to_dot(prov)
 dot.write_png(pjoin(OUTPUTPATH, "conversion.png"))
