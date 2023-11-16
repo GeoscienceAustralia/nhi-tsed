@@ -135,6 +135,14 @@ outputData.rename(
     inplace=True
 )
 
+# Replace NaN values with zeros:
+outputData.fillna(
+    {
+        "conARI100": 0,
+        "nonARI100": 0
+    },
+    inplace=True
+)
 outputFile = os.path.join(DATAPATH, "StationStormData.geojson")
 LOGGER.info(f"Saving data to {outputFile}")
 outputData.to_file(outputFile, driver="GeoJSON")
