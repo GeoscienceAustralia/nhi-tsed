@@ -299,6 +299,36 @@ stormClassWxCodesEnt = prov.entity(
     }
 )
 
+LOGGER.info("Doing cross tabulations of weather codes and storm types")
+colorder = ['Synoptic storm', 'Synoptic front',
+            'Storm-burst', 'Thunderstorm',
+            'Front up', 'Front down', 'Spike',]
+presentWxCodesTable = pd.crosstab(outputData['PresentWeatherCode'], outputData['stormType'])[colorder]  # noqa
+presentWxCodesTable.to_excel(
+    os.path.join(OUTPUTPATH, "storm_classification_presentwxcodes.xlsx")
+)
+
+pastWxCodesTable = pd.crosstab(outputData['PastWeatherCode'], outputData['stormType'])[colorder]  # noqa
+pastWxCodesTable.to_excel(
+    os.path.join(OUTPUTPATH, "storm_classification_pastwxcodes.xlsx")
+)
+
+thunderCodeTable = pd.crosstab(outputData['stormType'], outputData['thunder'])
+hailCodeTable = pd.crosstab(outputData['stormType'], outputData['hail'])
+dustCodeTable = pd.crosstab(outputData['stormType'], outputData['duststorm'])
+
+thunderCodeTable.to_excel(
+    os.path.join(OUTPUTPATH, "storm_classification_pastwxthunder.xlsx")
+)
+
+hailCodeTable.to_excel(
+    os.path.join(OUTPUTPATH, "storm_classification_pastwxhail.xlsx")
+)
+
+dustCodeTable.to_excel(
+    os.path.join(OUTPUTPATH, "storm_classification_pastwxdust.xlsx")
+)
+
 LOGGER.info("Saving provenance data")
 prov.wasGeneratedBy(stormClassWxCodesEnt, provlabel)
 prov.wasDerivedFrom(stormClassWxCodesEnt, stormClassEnt)
