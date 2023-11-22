@@ -308,9 +308,35 @@ presentWxCodesTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_presentwxcodes.xlsx")
 )
 
+presentWxCodesTableEnt = prov.entity(
+    ":presentWxCodesTable",
+    {
+        "dcterms:title": ("Daily classified storm data"
+                          "with present weather codes"),
+        "dcterms:description": ("Daily storm data with"
+                                "storm classes and present weather codes"),
+        "dcterms:type": "void:Dataset",
+        "prov:atLocation": "storm_classification_presentwxcodes.xlsx",
+        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+    }
+)
+
 pastWxCodesTable = pd.crosstab(outputData['PastWeatherCode'], outputData['stormType'])[colorder]  # noqa
 pastWxCodesTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_pastwxcodes.xlsx")
+)
+
+pastWxCodesTableEnt = prov.entity(
+    ":pastWxCodesTable",
+    {
+        "dcterms:title": ("Daily classified storm data"
+                          "with past weather codes"),
+        "dcterms:description": ("Daily storm data with"
+                                "storm classes and past weather codes"),
+        "dcterms:type": "void:Dataset",
+        "prov:atLocation": "storm_classification_pastwxcodes.xlsx",
+        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+    }
 )
 
 thunderCodeTable = pd.crosstab(outputData['stormType'], outputData['thunder'])
@@ -321,18 +347,58 @@ thunderCodeTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_pastwxthunder.xlsx")
 )
 
+thunderCodeTableEnt = prov.entity(
+    ":thunderCodeTable",
+    {
+        "dcterms:title": ("Daily classified storm data"
+                          "with thunder day code"),
+        "dcterms:description": ("Daily storm data with"
+                                "storm classes and thunder day code"),
+        "dcterms:type": "void:Dataset",
+        "prov:atLocation": "storm_classification_pastwxthunder.xlsx",
+        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+    }
+)
+
 hailCodeTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_pastwxhail.xlsx")
 )
-
+hailCodeTableEnt = prov.entity(
+    ":hailCodeTable",
+    {
+        "dcterms:title": ("Daily classified storm data"
+                          "with hail code"),
+        "dcterms:description": ("Daily storm data with"
+                                "storm classes and hail code"),
+        "dcterms:type": "void:Dataset",
+        "prov:atLocation": "storm_classification_pastwxhail.xlsx",
+        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+    }
+)
 dustCodeTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_pastwxdust.xlsx")
 )
-
+dustCodeTableEnt = prov.entity(
+    ":dustCodeTable",
+    {
+        "dcterms:title": ("Daily classified storm data"
+                          "with dust storm code"),
+        "dcterms:description": ("Daily storm data with"
+                                "storm classes and dust storm code"),
+        "dcterms:type": "void:Dataset",
+        "prov:atLocation": "storm_classification_pastwxdust.xlsx",
+        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+    }
+)
 LOGGER.info("Saving provenance data")
 prov.wasGeneratedBy(stormClassWxCodesEnt, provlabel)
 prov.wasDerivedFrom(stormClassWxCodesEnt, stormClassEnt)
 prov.wasDerivedFrom(stormClassWxCodesEnt, wxDescEnt)
+prov.wasDerivedFrom(presentWxCodesTableEnt, stormClassWxCodesEnt)
+prov.wasDerivedFrom(pastWxCodesTableEnt, stormClassWxCodesEnt)
+prov.wasDerivedFrom(thunderCodeTableEnt, stormClassWxCodesEnt)
+prov.wasDerivedFrom(hailCodeTableEnt, stormClassWxCodesEnt)
+prov.wasDerivedFrom(dustCodeTableEnt, stormClassWxCodesEnt)
 prov.used(provlabel, stormClassEnt)
 prov.used(provlabel, wxDescEnt)
 prov.used(provlabel, ":StormClassFile")
