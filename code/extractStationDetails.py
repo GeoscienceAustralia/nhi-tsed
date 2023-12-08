@@ -62,7 +62,7 @@ prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 prov.add_namespace("git", "http://github.com/GeoscienceAustralia")
-prov.add_namespace("tsed", "http://www.ga.gova.au/hazards")
+prov.add_namespace("tsed", "http://www.ga.gov.au/hazards")
 provlabel = "tsed:stationDataExtraction"
 provtitle = "Station details extraction"
 
