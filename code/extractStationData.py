@@ -86,6 +86,8 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
+prov.add_namespace("git", "https://github.com/GeoscienceAustralia")
+prov.add_namespace("tsed", "https://ga.gov.au/hazards")
 provlabel = ":stormDataExtraction"
 provtitle = "Storm data extraction"
 
@@ -140,13 +142,13 @@ def main(config, verbose=False):
     commit, tag, dt, url = flGitRepository(sys.argv[0])
 
     prov.agent(
-        sys.argv[0],
+        os.path.basename(sys.argv[0]),
         {
             "dcterms:type": "prov:SoftwareAgent",
-            "prov:Revision": commit,
-            "prov:tag": tag,
+            "git:commit": commit,
+            "git:tag": tag,
             "dcterms:date": dt,
-            "prov:url": url,
+            "git:url": url,
         },
     )
 
@@ -173,10 +175,11 @@ def main(config, verbose=False):
     configent = prov.entity(
         ":configurationFile",
         {
+            "prov:atLocation": os.path.basename(config.configFile),
             "dcterms:title": "Configuration file",
             "dcterms:type": "foaf:Document",
             "dcterms:format": "Text file",
-            "prov:atLocation": os.path.basename(config.configFile),
+            "dcterms:created": flModDate(config.configFile)
         },
     )
 
@@ -220,10 +223,10 @@ def LoadStationFile(config):
     g_stations.set_index("stnNum", inplace=True)
     prov.entity(":GeospatialStationData",
                 {
+                    "prov:atLocation": stationFile,
                     "dcterms:type": "void:dataset",
                     "dcterms:description": "Geospatial station information",
-                    "prov:atLocation": stationFile,
-                    "prov:GeneratedAt": flModDate(stationFile),
+                    "dcterms:created": flModDate(stationFile),
                     "dcterms:format": "GeoJSON",
                 })
 
@@ -271,10 +274,10 @@ def expandFileSpec(config, spec, category):
     specent = prov.collection(
         f":{spec}",
         {
+            "prov:atLocation": origindir,
             "dcterms:type": "prov:Collection",
             "dcterms:title": category,
-            "prov:atLocation": origindir,
-            "prov:GeneratedAt": dirmtime,
+            "dcterms:created": dirmtime,
         },
     )
     prov.used(provlabel, specent)
@@ -361,19 +364,17 @@ def processFiles(config):
     dmaxent = prov.entity(
         ":DailyMaxOutput",
         {
+            "prov:atLocation": pjoin(outputDir, "dailymax"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Daily max wind speed and associated obs",
-            "prov:atLocation": pjoin(outputDir, "dailymax"),
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
         },
     )
     dmeanent = prov.entity(
         ":DailyMeanOutput",
         {
+            "prov:atLocation": pjoin(outputDir, "dailymax"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Daily mean weather obs",
-            "prov:atLocation": pjoin(outputDir, "dailymax"),
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
         },
     )
     stormEventent = prov.entity(
@@ -382,13 +383,12 @@ def processFiles(config):
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Weather observations around daily max wind gust",  # noqa: E501
             "prov:atLocation": pjoin(outputDir, "events"),
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
         },
     )
-
-    prov.wasGeneratedBy(dmaxent, provlabel)
-    prov.wasGeneratedBy(dmeanent, provlabel)
-    prov.wasGeneratedBy(stormEventent, provlabel)
+    createdDateTime = datetime.now().strftime(DATEFMT)
+    prov.wasGeneratedBy(dmaxent, provlabel, time=createdDateTime)
+    prov.wasGeneratedBy(dmeanent, provlabel, time=createdDateTime)
+    prov.wasGeneratedBy(stormEventent, provlabel, time=createdDateTime)
 
 
 def processFile(filename: str, config) -> bool:
@@ -401,12 +401,14 @@ def processFile(filename: str, config) -> bool:
 
     global g_stations
     outputFormat = config.get("Output", "Format", fallback="pickle")
-    prov.entity(":DailyMaxOutput").add_attributes({"format": outputFormat})
-    prov.entity(":DailyMeanOutput").add_attributes({"format": outputFormat})
-    prov.entity(":stormEventData").add_attributes({"format": outputFormat})
+    prov.entity("tsed:DailyMaxOutput").add_attributes({"format": outputFormat})
+    prov.entity("tsed:DailyMeanOutput").add_attributes({"format": outputFormat})  # noqa
+    prov.entity("tsed:stormEventData").add_attributes({"format": outputFormat})
 
     outputDir = config.get("Output", "Path")
     threshold = config.getfloat("ObservationFiles", "Threshold")
+
+    # Set the file extension based on intended output format
     ext = "pkl" if outputFormat == "pickle" else "csv"
     outfunc = "to_pickle" if outputFormat == "pickle" else "to_csv"
 
@@ -450,10 +452,10 @@ def processFile(filename: str, config) -> bool:
                 e1 = prov.entity(
                     filename,
                     {
+                        "prov:atLocation": pjoin(outputDir, "events", basename),  # noqa: E501
                         "dcterms:type": "void:dataset",
                         "dcterms:description": "Gust event information",
-                        "prov:atLocation": pjoin(outputDir, "events", basename),  # noqa: E501
-                        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+                        "dcterms:created": datetime.now().strftime(DATEFMT),
                         "dcterms:format": outputFormat,
                     },
                 )

@@ -70,25 +70,27 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
-provlabel = ":stormGustClassification"
+prov.add_namespace("git", "https://github.com/GeoscienceAustralia")
+prov.add_namespace("tsed", "https://ga.gov.au/hazards")
+provlabel = "tsed:stormGustClassification"
 provtitle = "Storm gust classification"
 
 codeent = prov.entity(
     sys.argv[0],
     {
         "dcterms:type": "prov:SoftwareAgent",
-        "prov:Revision": commit,
-        "prov:tag": tag,
+        "git:commit": commit,
+        "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
 pandasent = prov.entity(
     "pandas",
     {
+        "prov:atLocation": "https://doi.org/10.5281/zenodo.3509134",
         "prov:Revision": pd.__version__,
-        "prov:url": "https://doi.org/10.5281/zenodo.3509134"
     }
 )
 
@@ -156,13 +158,13 @@ def main(config, verbose=False):
     commit, tag, dt, url = flGitRepository(sys.argv[0])
 
     prov.agent(
-        sys.argv[0],
+        os.path.basename(sys.argv[0]),
         {
             "dcterms:type": "prov:SoftwareAgent",
-            "prov:Revision": commit,
-            "prov:tag": tag,
+            "git:commit": commit,
+            "git:tag": tag,
             "dcterms:date": dt,
-            "prov:url": url,
+            "git:url": url,
         },
     )
 
@@ -189,10 +191,11 @@ def main(config, verbose=False):
     configent = prov.entity(
         ":configurationFile",
         {
+            "prov:atLocation": os.path.basename(config.configFile),
             "dcterms:title": "Configuration file",
             "dcterms:type": "foaf:Document",
             "dcterms:format": "Text file",
-            "prov:atLocation": os.path.basename(config.configFile),
+            "dcterms:created": flModDate(config.configFile)
         },
     )
 
@@ -205,13 +208,15 @@ def main(config, verbose=False):
         provlabel,
         starttime,
         endtime,
-        {"dcterms:title": provtitle, "dcterms:type": "void:Dataset"},
+        {
+            "dcterms:title": provtitle,
+            "dcterms:type": "void:Dataset"},
     )
     prov.wasAssociatedWith(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
     prov.used(provlabel, configent)
     prov.used(provlabel, ":GeospatialStationData")
-    prov.wasAssociatedWith(extractionact, sys.argv[0])
+    prov.wasAssociatedWith(extractionact, os.path.basename(sys.argv[0]))
 
     prov.serialize(pjoin(outputDir, "gustextraction.xml"), format="xml")
 
@@ -235,10 +240,10 @@ def LoadStationFile(config):
     prov.entity(
         ":GeospatialStationData",
         {
+            "prov:atLocation": stationFile,
             "dcterms:type": "void:dataset",
             "dcterms:description": "Geospatial station information",
-            "prov:atLocation": stationFile,
-            "prov:GeneratedAt": flModDate(stationFile),
+            "dcterms:created": flModDate(stationFile),
             "dcterms:format": "GeoJSON",
         },
     )
@@ -299,12 +304,12 @@ def expandFileSpec(config, spec, category):
     )
     dirmtime = flPathTime(origindir)
     specent = prov.collection(
-        f":{spec}",
+        f":{category}",
         {
-            "dcterms:type": "prov:Collection",
-            "dcterms:title": category,
             "prov:atLocation": origindir,
-            "prov:GeneratedAt": dirmtime,
+            "dcterms:type": "prov:Collection",
+            "dcterms:description": spec,
+            "dcterms:created": dirmtime,
         },
     )
     prov.used(provlabel, specent)
@@ -398,14 +403,13 @@ def processFiles(config):
     gustent = prov.entity(
         ":DailyGustClassification",
         {
+            "prov:atLocation": pjoin(outputDir, "gustratio"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Gust classification of daily max wind gust",  # noqa: E501
-            "prov:atLocation": pjoin(outputDir, "gustratio"),
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
         },
     )
 
-    prov.wasGeneratedBy(gustent, provlabel)
+    prov.wasGeneratedBy(gustent, provlabel, time=datetime.now().strftime(DATEFMT))  # noqa
 
 
 def processFile(filename: str, config) -> bool:
@@ -449,10 +453,10 @@ def processFile(filename: str, config) -> bool:
             e1 = prov.entity(
                 filename,
                 {
+                    "prov:atLocation": pjoin(outputDir, "events", basename),
                     "dcterms:type": "void:dataset",
                     "dcterms:description": "Gust event information",
-                    "prov:atLocation": pjoin(outputDir, "events", basename),
-                    "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+                    "dcterms:created": datetime.now().strftime(DATEFMT),
                     "dcterms:format": outputFormat,
                 },
             )
