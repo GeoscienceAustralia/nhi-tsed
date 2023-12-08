@@ -70,6 +70,7 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
+prov.add_namespace("sioc", "http://rdfs.org/sioc/ns#")
 prov.add_namespace("git", "https://github.com/GeoscienceAustralia")
 prov.add_namespace("tsed", "https://ga.gov.au/hazards")
 provlabel = "tsed:stormGustClassification"
@@ -90,7 +91,7 @@ pandasent = prov.entity(
     "pandas",
     {
         "prov:atLocation": "https://doi.org/10.5281/zenodo.3509134",
-        "prov:Revision": pd.__version__,
+        "sioc:latest_version": pd.__version__,
     }
 )
 

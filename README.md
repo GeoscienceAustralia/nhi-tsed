@@ -65,8 +65,13 @@ Original source data can be requested from the Bureau of Meteorology, Climate Da
 5. `ClassifyEvents.ipynb` - interactive notebook to visually classify storms with maximum gust > 90 km/h at high-quality stations
 6. `classifyTimeSeries.py` - use ML approach in `sktime` to classify all storm events (> 60 km/h) [^4]
 7. `convertStormCounts.py` - convert classified storms to counts of storm type at each station
-8. `AnalyseClassifiedStorms.ipynb` - interactive notebook to compare this classification against the El Rafei _et al._[^5] gust classification
-9. `analyseStormEventTypes.ipynb` - interactive notebook to examine the full classified storm event set, e.g. median and 99th percentile wind gusts for each storm type, seasonal distribution of storm type, comparison against other metrics (e.g. gust ratio, emergence). Still a work in progress.
+8. `joinStormRatesToStationDetails.py` - Join storm rate data to station details and store output in GeoJSON file
+9. `joinStormClassToMaxDailyData.py` - Join storm classification data to daily maximum gust data
+10. `joinDailyWeatherObservations.py`- Join the daily weather observations to the storm data
+
+## Analysis
+1. `AnalyseClassifiedStorms.ipynb` - interactive notebook to compare this classification against the El Rafei _et al._[^5] gust classification
+2. `analyseStormEventTypes.ipynb` - interactive notebook to examine the full classified storm event set, e.g. median and 99th percentile wind gusts for each storm type, seasonal distribution of storm type, comparison against other metrics (e.g. gust ratio, emergence). Still a work in progress.
 
 
 
