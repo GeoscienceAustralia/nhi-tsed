@@ -29,7 +29,8 @@ prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 prov.add_namespace("git", "https://github.com/GeoscienceAustralia/nhi-tsed")
-provlabel = ":stormDataConversion"
+prov.add_namespace("tsed", "https://ga.gov.au/hazards")
+provlabel = "tsed:stormDataConversion"
 provtitle = "Storm data conversion"
 
 BASEDIR = r"..\data\allevents"
@@ -45,23 +46,23 @@ allstndf = gpd.read_file(fullStationFile)
 allstndf.set_index("stnNum", inplace=True)
 allstndf['stnWMOIndex'] = allstndf['stnWMOIndex'].astype('Int64')
 prov.entity(
-    ":GeospatialStationData",
+    "tsed:GeospatialStationData",
     {
+        "prov:location": fullStationFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station information",
-        "prov:atLocation": fullStationFile,
-        "prov:GeneratedAt": flModDate(fullStationFile),
+        "dcterms:created": flModDate(fullStationFile),
         "dcterms:format": "GeoJSON",
     },
 )
 
 classent = prov.entity(
-    ":stormClassifcationSet",
+    "tsed:stormClassifcationSet",
     {
+        "prov:location": pjoin(OUTPUTPATH, "stormclass.pkl"),
         "dcterms:title": "Storm classifications",
         "dcterms:type": "dcterms:Dataset",
-        "prov:generatedAtTime": flModDate(pjoin(OUTPUTPATH, "stormclass.pkl")),
-        "prov:atLocation": pjoin(OUTPUTPATH, "stormclass.pkl"),
+        "dcterms:created": flModDate(pjoin(OUTPUTPATH, "stormclass.pkl")),
     }
 )
 
@@ -72,7 +73,7 @@ codeent = prov.entity(
         "git:commit": commit,
         "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
@@ -143,12 +144,12 @@ propgdf = gpd.GeoDataFrame(propdf,
 propgdf.to_file(pjoin(OUTPUTPATH, "propstorms.json"), driver="GeoJSON")
 
 propent = prov.entity(
-    ":propStormGeospatialData",
+    "tsed:propStormGeospatialData",
     {
-        "dcterms:type": "void:dataset",
+        "prov:location": pjoin(OUTPUTPATH, "propstorms.json"),
         "dcterms:description": "Geospatial storm proportions information",
-        "prov:atLocation": pjoin(OUTPUTPATH, "propstorms.json"),
-        "prov:GeneratedAt": flModDate(pjoin(OUTPUTPATH, "propstorms.json")),
+        "dcterms:type": "void:dataset",
+        "dcterms:created": flModDate(pjoin(OUTPUTPATH, "propstorms.json")),
         "dcterms:format": "GeoJSON",
     }
     )
@@ -247,23 +248,23 @@ plt.savefig(nonconvFig, bbox_inches='tight')
 plt.close()
 
 prov.entity(
-    ":convectiveRateMap",
+    "tsed:convectiveRateMap",
     {
+        "prov:location": convFig,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Convective storm rate map",
-        "prov:atLocation": convFig,
-        "prov:GeneratedAt": flModDate(convFig),
+        "dcterms:created": flModDate(convFig),
         "dcterms:format": "PNG",
     }
 )
 
 prov.entity(
-    ":nonconvectiveRateMap",
+    "tsed:nonconvectiveRateMap",
     {
+        "prov:location": nonconvFig,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Non-convective storm rate map",
-        "prov:atLocation": nonconvFig,
-        "prov:GeneratedAt": flModDate(nonconvFig),
+        "dcterms:created": flModDate(nonconvFig),
         "dcterms:format": "PNG",
     }
 )
@@ -274,12 +275,12 @@ conv = prov.activity(provlabel, starttime, endtime)
 
 prov.used(conv, codeent)
 prov.used(conv, classent)
-prov.used(conv, ":GeospatialStationData")
+prov.used(conv, "tsed:GeospatialStationData")
 prov.wasGeneratedBy(propent, conv)
-prov.wasGeneratedBy(":convectiveRateMap", conv)
-prov.wasDerivedFrom(":convectiveRateMap", propent)
-prov.wasGeneratedBy(":nonconvectiveRateMap", conv)
-prov.wasDerivedFrom(":nonconvectiveRateMap", propent)
+prov.wasGeneratedBy("tsed:convectiveRateMap", conv)
+prov.wasDerivedFrom("tsed:convectiveRateMap", propent)
+prov.wasGeneratedBy("tsed:nonconvectiveRateMap", conv)
+prov.wasDerivedFrom("tsed:nonconvectiveRateMap", propent)
 prov.serialize(pjoin(OUTPUTPATH, "conversion.xml"), format="xml")
 dot = prov_to_dot(prov)
 dot.write_png(pjoin(OUTPUTPATH, "conversion.png"))

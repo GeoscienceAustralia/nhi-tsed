@@ -42,7 +42,8 @@ prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 prov.add_namespace("git", "https://github.com/GeoscienceAustralia/nhi-tsed")
-provlabel = ":joinStormRates"
+prov.add_namespace("tsed", "https://www.ga.gov.au/hazards")
+provlabel = "tsed:joinStormRates"
 provtitle = "Join storm rates to station details"
 
 codeent = prov.entity(
@@ -52,7 +53,7 @@ codeent = prov.entity(
         "git:commit": commit,
         "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
@@ -88,12 +89,12 @@ stnDetails = gpd.read_file(fullStationFile)
 stnDetails.set_index("stnNum", inplace=True)
 stnDetails['stnWMOIndex'] = stnDetails['stnWMOIndex'].astype('Int64')
 prov.entity(
-    ":GeospatialStationData",
+    "tsed:GeospatialStationData",
     {
+        "prov:location": fullStationFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station information",
-        "prov:atLocation": fullStationFile,
-        "prov:GeneratedAt": flModDate(fullStationFile),
+        "dcterms:created": flModDate(fullStationFile),
         "dcterms:format": "GeoJSON",
     },
 )
@@ -106,12 +107,12 @@ stormFreqFile = os.path.join(
     )
 
 prov.entity(
-    ":StormFrequencyFile",
+    "tsed:StormFrequencyFile",
     {
+        "prov:location": stormFreqFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Storm frequency information",
-        "prov:atLocation": stormFreqFile,
-        "prov:GeneratedAt": flModDate(stormFreqFile),
+        "dcterms:created": flModDate(stormFreqFile),
         "dcterms:format": "comma-separated values",
     },
 )
@@ -148,12 +149,12 @@ LOGGER.info(f"Saving data to {outputFile}")
 outputData.to_file(outputFile, driver="GeoJSON")
 
 stnstormdata = prov.entity(
-    ":StationStormData",
+    "tsed:StationStormData",
     {
+        "prov:location": outputFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station details with storm data",
-        "prov:atLocation": outputFile,
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:format": "GeoJSON",
     },
 )
@@ -162,12 +163,12 @@ endtime = datetime.now().strftime(DATEFMT)
 prov.activity(":joinStormRates", startTime=starttime, endTime=endtime)
 prov.wasGeneratedBy(
     stnstormdata,
-    ":joinStormRates",
+    "tsed:joinStormRates",
     time=datetime.now().strftime(DATEFMT)
 )
-prov.used(":joinStormRates", ":GeospatialStationData")
-prov.used(":joinStormRates", ":StormFrequencyFile")
-prov.wasAssociatedWith(":joinStormRates", codeent)
+prov.used("tsed:joinStormRates", "tsed:GeospatialStationData")
+prov.used("tsed:joinStormRates", "tsed:StormFrequencyFile")
+prov.wasAssociatedWith("tsed:joinStormRates", codeent)
 prov.serialize(os.path.join(DATAPATH, "station_storm_data.xml"), format="xml")
 dot = prov_to_dot(prov)
 dot.write_png(os.path.join(DATAPATH, "station_storm_data.png"))

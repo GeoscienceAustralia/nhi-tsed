@@ -46,7 +46,8 @@ prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 prov.add_namespace("git", "https://github.com/GeoscienceAustralia/nhi-tsed")
-provlabel = ":joinStormClass"
+prov.add_namespace("tsed", "https://www.ga.gov.au/hazards")
+provlabel = "tsed:joinStormClass"
 provtitle = "Join storm class to daily max data"
 
 codeent = prov.entity(
@@ -56,7 +57,7 @@ codeent = prov.entity(
         "git:commit": commit,
         "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
@@ -149,12 +150,12 @@ stnDetails = gpd.read_file(fullStationFile)
 stnDetails.set_index("stnNum", inplace=True)
 stnDetails['stnWMOIndex'] = stnDetails['stnWMOIndex'].astype('Int64')
 prov.entity(
-    ":GeospatialStationData",
+    "tsed:GeospatialStationData",
     {
+        "prov:location": fullStationFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station information",
-        "prov:atLocation": fullStationFile,
-        "prov:GeneratedAt": flModDate(fullStationFile),
+        "dcterms:created": flModDate(fullStationFile),
         "dcterms:format": "GeoJSON",
     },
 )
@@ -166,12 +167,12 @@ stormClassFile = os.path.join(
     )
 
 prov.entity(
-    ":StormClassFile",
+    "tsed:StormClassFile",
     {
+        "prov:location": stormClassFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Storm classificaiton information",
-        "prov:atLocation": stormClassFile,
-        "prov:GeneratedAt": flModDate(stormClassFile),
+        "dcterms:created": flModDate(stormClassFile),
         "dcterms:format": "comma-separated values",
     },
 )
@@ -185,12 +186,12 @@ stormClass['idx'] = stormClass.index
 
 LOGGER.info("Loading daily max data")
 dailyMaxEnt = prov.collection(
-    ":dailyMaxWindGustData",
+    "tsed:dailyMaxWindGustData",
     {
+        "prov:location": DAILYMAXPATH,
         "dcterms:type": "prov:Collection",
         "dcterms:title": "Daily maximum wind gust data",
-        "prov:atLocation": DAILYMAXPATH,
-        "prov:GeneratedAt": flPathTime(DAILYMAXPATH),
+        "dcterms:created": flPathTime(DAILYMAXPATH),
         },
 )
 dflist = []
@@ -216,12 +217,12 @@ dailyMax["idx"] = dailyMax.index
 
 LOGGER.info("Loading gust ratio data")
 gustRatioEnt = prov.collection(
-    ":dailyGustRatioData",
+    "tsed:dailyGustRatioData",
     {
+        "prov:location": GUSTRATIOPATH,
         "dcterms:type": "prov:Collection",
         "dcterms:title": "Daily gust ratio data",
-        "prov:atLocation": GUSTRATIOPATH,
-        "prov:GeneratedAt": flPathTime(GUSTRATIOPATH),
+        "dcterms:location": flPathTime(GUSTRATIOPATH),
         },
 )
 gustlist = []
@@ -233,9 +234,9 @@ for stn in stnDetails.index:
     else:
         gustlist.append(df)
         entity = prov.entity(
-           f":{os.path.basename(fname)}",
+           f"tsed:{os.path.basename(fname)}",
            {
-               "prov.atLocation": GUSTRATIOPATH,
+               "prov.location": GUSTRATIOPATH,
                "dcterms:created": flModDate(fname)
            }
         )
@@ -264,13 +265,13 @@ outputFile = os.path.join(OUTPUTPATH, "storm_classification_data.csv")
 outputData.to_csv(outputFile, index=False)
 
 stormClassEnt = prov.entity(
-    ":ClassifiedDailyStorms",
+    "tsed:ClassifiedDailyStorms",
     {
+        "prov:location": outputFile,
         "dcterms:title": "Daily classified storm data",
         "dcterms:description": "Daily storm data with storm classes",
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": outputFile,
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+        "dcterms:created": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -280,8 +281,8 @@ prov.wasDerivedFrom(stormClassEnt, dailyMaxEnt)
 prov.wasDerivedFrom(stormClassEnt, gustRatioEnt)
 prov.used(provlabel, dailyMaxEnt)
 prov.used(provlabel, gustRatioEnt)
-prov.used(provlabel, ":StormClassFile")
-prov.used(provlabel, ":GeospatialStationData")
+prov.used(provlabel, "tsed:StormClassFile")
+prov.used(provlabel, "tsed:GeospatialStationData")
 
 prov.serialize(os.path.join(OUTPUTPATH, "stormclassdata.xml"), format='xml')
 
