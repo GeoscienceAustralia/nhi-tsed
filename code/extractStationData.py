@@ -88,7 +88,7 @@ prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 prov.add_namespace("git", "https://github.com/GeoscienceAustralia")
 prov.add_namespace("tsed", "https://ga.gov.au/hazards")
-provlabel = ":stormDataExtraction"
+provlabel = "tsed:stormDataExtraction"
 provtitle = "Storm data extraction"
 
 
