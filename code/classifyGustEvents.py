@@ -2,7 +2,7 @@
 Objective event classification using gust ratio
 
 Classify wind gust events into convective or non-convective based on the wind
-gust ratio, as defined in El Rafei et al. 2023
+gust ratio, as defined in El Rafei et al. 2023.
 
 If r_1 = V_G/V_1 < 2.0 and r_2 = V_G/V_2 < 2.0, then the event is considered
 synoptic. Otherwise, the event is classed as convective
@@ -16,6 +16,14 @@ characterisation of extreme wind gust hazards in New South Wales,
 Australia. *Nat Hazards*, **117**, 875–895,
 https://doi.org/10.1007/s11069-023-05887-1.
 
+To run:
+
+#. Edit the configuration file (classifyGustEvents.ini) to set the paths
+   to files and output folders.
+#. Ensure the required Python libraries are installed in your environment
+#. Ensure you have the `nhi-pylib` repo installed, and the path included
+   in your PYTHONPATH environment variable.
+#. Run `python classifyGustEvents.py -c classifyGustEvents.ini`
 """
 
 import os
