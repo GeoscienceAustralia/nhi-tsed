@@ -236,7 +236,7 @@ for stn in stnDetails.index:
         entity = prov.entity(
            f"tsed:{os.path.basename(fname)}",
            {
-               "prov.location": GUSTRATIOPATH,
+               "prov:location": GUSTRATIOPATH,
                "dcterms:created": flModDate(fname)
            }
         )

@@ -274,7 +274,7 @@ for stn in stnDetails.index:
         entity = prov.entity(
            f":{os.path.basename(fname)}",
            {
-               "prov.location": PureWindowsPath(WXDATAPATH).as_posix(),
+               "prov:location": PureWindowsPath(WXDATAPATH).as_posix(),
                "dcterms:created": flModDate(fname)
            }
         )

@@ -98,7 +98,7 @@ codeent = prov.entity(
 pandasent = prov.entity(
     "pandas",
     {
-        "prov:atLocation": "https://doi.org/10.5281/zenodo.3509134",
+        "prov:location": "https://doi.org/10.5281/zenodo.3509134",
         "sioc:latest_version": pd.__version__,
     }
 )
@@ -200,7 +200,7 @@ def main(config, verbose=False):
     configent = prov.entity(
         ":configurationFile",
         {
-            "prov:atLocation": os.path.basename(config.configFile),
+            "prov:location": os.path.basename(config.configFile),
             "dcterms:title": "Configuration file",
             "dcterms:type": "foaf:Document",
             "dcterms:format": "Text file",
@@ -249,7 +249,7 @@ def LoadStationFile(config):
     prov.entity(
         "tsed:GeospatialStationData",
         {
-            "prov:atLocation": stationFile,
+            "prov:location": stationFile,
             "dcterms:type": "void:dataset",
             "dcterms:description": "Geospatial station information",
             "dcterms:created": flModDate(stationFile),
@@ -315,7 +315,7 @@ def expandFileSpec(config, spec, category):
     specent = prov.collection(
         f":{category}",
         {
-            "prov:atLocation": origindir,
+            "prov:location": origindir,
             "dcterms:type": "prov:Collection",
             "dcterms:description": spec,
             "dcterms:created": dirmtime,
@@ -335,7 +335,7 @@ def expandFileSpec(config, spec, category):
                     prov.entity(
                         f":{os.path.basename(file)}",
                         {
-                            "prov:atLocation": origindir,
+                            "prov:location": origindir,
                             "dcterms:created": flModDate(file),
                         },
                     )
@@ -412,7 +412,7 @@ def processFiles(config):
     gustent = prov.entity(
         "tsed:DailyGustClassification",
         {
-            "prov:atLocation": pjoin(outputDir, "gustratio"),
+            "prov:location": pjoin(outputDir, "gustratio"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Gust classification of daily max wind gust",  # noqa: E501
         },
@@ -462,7 +462,7 @@ def processFile(filename: str, config) -> bool:
             e1 = prov.entity(
                 filename,
                 {
-                    "prov:atLocation": pjoin(outputDir, "events", basename),
+                    "prov:location": pjoin(outputDir, "events", basename),
                     "dcterms:type": "void:dataset",
                     "dcterms:description": "Gust event information",
                     "dcterms:created": datetime.now().strftime(DATEFMT),

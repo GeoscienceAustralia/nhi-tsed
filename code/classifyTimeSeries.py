@@ -368,7 +368,7 @@ allstndf['stnWMOIndex'] = allstndf['stnWMOIndex'].astype('Int64')
 prov.entity(
     "tsed:GeospatialStationData",
     {
-        "prov:atLocation": fullStationFile,
+        "prov:location": fullStationFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station information",
         "dcterms:created": flModDate(fullStationFile),

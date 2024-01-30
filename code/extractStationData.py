@@ -176,7 +176,7 @@ def main(config, verbose=False):
     configent = prov.entity(
         ":configurationFile",
         {
-            "prov:atLocation": os.path.basename(config.configFile),
+            "prov:location": os.path.basename(config.configFile),
             "dcterms:title": "Configuration file",
             "dcterms:type": "foaf:Document",
             "dcterms:format": "Text file",
@@ -224,7 +224,7 @@ def LoadStationFile(config):
     g_stations.set_index("stnNum", inplace=True)
     prov.entity("tsed:GeospatialStationData",
                 {
-                    "prov:atLocation": stationFile,
+                    "prov:location": stationFile,
                     "dcterms:type": "void:dataset",
                     "dcterms:description": "Geospatial station information",
                     "dcterms:created": flModDate(stationFile),
@@ -273,12 +273,13 @@ def expandFileSpec(config, spec, category):
     )
     dirmtime = flPathTime(origindir)
     specent = prov.collection(
-        f":{spec}",
+        f":{category}",
         {
-            "prov:atLocation": origindir,
+            "prov:location": origindir,
             "dcterms:type": "prov:Collection",
             "dcterms:title": category,
             "dcterms:created": dirmtime,
+            "dcterms:value": spec,
         },
     )
     prov.used(provlabel, specent)
@@ -295,7 +296,7 @@ def expandFileSpec(config, spec, category):
                     prov.entity(
                         f":{os.path.basename(file)}",
                         {
-                            "prov:atLocation": origindir,
+                            "prov:location": origindir,
                             "dcterms:created": flModDate(file),
                         },
                     )
@@ -381,7 +382,7 @@ def processFiles(config):
     dmaxent = prov.entity(
         "tsed:DailyMaxOutput",
         {
-            "prov:atLocation": pjoin(outputDir, "dailymax"),
+            "prov:location": pjoin(outputDir, "dailymax"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Daily max wind speed and associated obs",
             "dcterms:format": outputFormat,
@@ -390,7 +391,7 @@ def processFiles(config):
     dmeanent = prov.entity(
         "tsed:DailyMeanOutput",
         {
-            "prov:atLocation": pjoin(outputDir, "dailymax"),
+            "prov:location": pjoin(outputDir, "dailymax"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Daily mean weather obs",
             "dcterms:format": outputFormat,
@@ -399,9 +400,9 @@ def processFiles(config):
     stormEventent = prov.entity(
         "tsed:stormEventData",
         {
+            "prov:location": pjoin(outputDir, "events"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Weather observations around daily max wind gust",  # noqa: E501
-            "prov:atLocation": pjoin(outputDir, "events"),
             "dcterms:format": outputFormat,
         },
     )
@@ -469,7 +470,7 @@ def processFile(filename: str, config) -> bool:
                 e1 = prov.entity(
                     basename,
                     {
-                        "prov:atLocation": pjoin(outputDir, "events", basename),  # noqa: E501
+                        "prov:location": pjoin(outputDir, "events", basename),  # noqa: E501
                         "dcterms:type": "void:dataset",
                         "dcterms:description": "Gust event information",
                         "dcterms:created": datetime.now().strftime(DATEFMT),
