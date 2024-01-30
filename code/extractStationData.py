@@ -41,6 +41,7 @@ import glob
 import argparse
 import getpass
 import logging
+import concurrent.futures
 from os.path import join as pjoin
 from datetime import datetime, timedelta
 from configparser import ConfigParser, ExtendedInterpolation
@@ -199,7 +200,7 @@ def main(config, verbose=False):
     prov.wasAttributedTo(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
     prov.used(provlabel, configent)
-    prov.used(provlabel, ":GeospatialStationData")
+    prov.used(provlabel, "tsed:GeospatialStationData")
     prov.wasAssociatedWith(extractionact, sys.argv[0])
 
     prov.serialize(pjoin(outputDir, "extraction.xml"), format="xml")
@@ -221,7 +222,7 @@ def LoadStationFile(config):
     stationFile = config.get("ObservationFiles", "StationFile")
     g_stations = gpd.read_file(stationFile)
     g_stations.set_index("stnNum", inplace=True)
-    prov.entity(":GeospatialStationData",
+    prov.entity("tsed:GeospatialStationData",
                 {
                     "prov:atLocation": stationFile,
                     "dcterms:type": "void:dataset",
@@ -346,43 +347,62 @@ def processFiles(config):
     category = "ObservationFiles"
     originDir = config.get(category, "OriginDir", fallback=defaultOriginDir)
     LOGGER.debug(f"Origin directory: {originDir}")
+    outputFormat = config.get("Output", "Format", fallback="pickle")
 
-    for f in g_files[category]:
-        LOGGER.info(f"Processing {f}")
-        directory, fname, md5sum, moddate = flGetStat(f)
-        if pAlreadyProcessed(directory, fname, "md5sum", md5sum):
-            LOGGER.info(f"Already processed {f}")
-        else:
-            if processFile(f, config):
-                LOGGER.info(f"Successfully processed {f}")
-                pWriteProcessedFile(f)
-                if archiveWhenProcessed:
-                    pArchiveFile(f)
-                elif deleteWhenProcessed:
-                    os.unlink(f)
+    max_threads = os.cpu_count()
+
+    with concurrent.futures.ThreadPoolExecutor(max_threads) as executor:
+        futures = {}
+
+        for f in g_files[category]:
+            LOGGER.info(f"Processing {f}")
+            directory, fname, md5sum, moddate = flGetStat(f)
+            if pAlreadyProcessed(directory, fname, "md5sum", md5sum):
+                LOGGER.info(f"Already processed {f}")
+            else:
+                future = executor.submit(processFile, f, config)
+                futures[future] = f
+
+        concurrent.futures.wait(futures)
+
+        for future, f in futures.items():
+            try:
+                result = future.result()
+                if result:
+                    LOGGER.info(f"Successfully processed {f}")
+                    pWriteProcessedFile(f)
+                    if archiveWhenProcessed:
+                        pArchiveFile(f)
+                    elif deleteWhenProcessed:
+                        os.unlink(f)
+            except Exception as e:
+                LOGGER.exception(f"Failed to process {f}")
 
     dmaxent = prov.entity(
-        ":DailyMaxOutput",
+        "tsed:DailyMaxOutput",
         {
             "prov:atLocation": pjoin(outputDir, "dailymax"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Daily max wind speed and associated obs",
+            "dcterms:format": outputFormat,
         },
     )
     dmeanent = prov.entity(
-        ":DailyMeanOutput",
+        "tsed:DailyMeanOutput",
         {
             "prov:atLocation": pjoin(outputDir, "dailymax"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Daily mean weather obs",
+            "dcterms:format": outputFormat,
         },
     )
     stormEventent = prov.entity(
-        ":stormEventData",
+        "tsed:stormEventData",
         {
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Weather observations around daily max wind gust",  # noqa: E501
             "prov:atLocation": pjoin(outputDir, "events"),
+            "dcterms:format": outputFormat,
         },
     )
     createdDateTime = datetime.now().strftime(DATEFMT)
@@ -400,15 +420,12 @@ def processFile(filename: str, config) -> bool:
     """
 
     global g_stations
-    outputFormat = config.get("Output", "Format", fallback="pickle")
-    prov.entity("tsed:DailyMaxOutput").add_attributes({"format": outputFormat})
-    prov.entity("tsed:DailyMeanOutput").add_attributes({"format": outputFormat})  # noqa
-    prov.entity("tsed:stormEventData").add_attributes({"format": outputFormat})
 
     outputDir = config.get("Output", "Path")
     threshold = config.getfloat("ObservationFiles", "Threshold")
 
     # Set the file extension based on intended output format
+    outputFormat = config.get("Output", "Format", fallback="pickle")
     ext = "pkl" if outputFormat == "pickle" else "csv"
     outfunc = "to_pickle" if outputFormat == "pickle" else "to_csv"
 
@@ -450,7 +467,7 @@ def processFile(filename: str, config) -> bool:
                 )  # noqa: E501
                 getattr(eventdf, outfunc)(pjoin(outputDir, "events", basename))
                 e1 = prov.entity(
-                    filename,
+                    basename,
                     {
                         "prov:atLocation": pjoin(outputDir, "events", basename),  # noqa: E501
                         "dcterms:type": "void:dataset",

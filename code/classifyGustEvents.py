@@ -224,7 +224,7 @@ def main(config, verbose=False):
     prov.wasAssociatedWith(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
     prov.used(provlabel, configent)
-    prov.used(provlabel, ":GeospatialStationData")
+    prov.used(provlabel, "tsed:GeospatialStationData")
     prov.wasAssociatedWith(extractionact, os.path.basename(sys.argv[0]))
 
     prov.serialize(pjoin(outputDir, "gustextraction.xml"), format="xml")
@@ -247,7 +247,7 @@ def LoadStationFile(config):
     g_stations = gpd.read_file(stationFile)
     g_stations.set_index("stnNum", inplace=True)
     prov.entity(
-        ":GeospatialStationData",
+        "tsed:GeospatialStationData",
         {
             "prov:atLocation": stationFile,
             "dcterms:type": "void:dataset",
@@ -410,7 +410,7 @@ def processFiles(config):
                     os.unlink(f)
 
     gustent = prov.entity(
-        ":DailyGustClassification",
+        "tsed:DailyGustClassification",
         {
             "prov:atLocation": pjoin(outputDir, "gustratio"),
             "dcterms:type": "void:Dataset",

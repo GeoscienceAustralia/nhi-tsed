@@ -326,7 +326,7 @@ def processStationFiles(config):
 
     # Provenance:
     geostnlist = prov.entity(
-        ":GeospatialStationData",
+        "tsed:GeospatialStationData",
         {
             "prov:location": geojsonfile,
             "dcterms:type": "void:dataset",

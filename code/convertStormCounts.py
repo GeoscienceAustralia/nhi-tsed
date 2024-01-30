@@ -154,7 +154,7 @@ propent = prov.entity(
     }
     )
 
-prov.wasDerivedFrom(propent, ":GeospatialStationData", )
+prov.wasDerivedFrom(propent, "tsed:GeospatialStationData", )
 prov.wasDerivedFrom(propent, classent)
 
 LOGGER.info("Plotting maps of storm type proportions")
