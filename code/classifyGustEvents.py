@@ -498,6 +498,7 @@ def extractGustRatio(filename, stnState, variable="windgust"):
             names=ONEMINUTENAMES,
             header=0,
             parse_dates={"datetime": [7, 8, 9, 10, 11]},
+            date_format="%Y %m %d %H %M",
             na_values=["####"],
             skipinitialspace=True,
         )
