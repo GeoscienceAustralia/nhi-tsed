@@ -61,7 +61,9 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
-provlabel = ":stationDataExtraction"
+prov.add_namespace("git", "http://github.com/GeoscienceAustralia")
+prov.add_namespace("tsed", "http://www.ga.gov.au/hazards")
+provlabel = "tsed:stationDataExtraction"
 provtitle = "Station details extraction"
 
 
@@ -117,10 +119,10 @@ def main(config, verbose=False):
         sys.argv[0],
         {
             "dcterms:type": "prov:SoftwareAgent",
-            "prov:Revision": commit,
-            "prov:tag": tag,
+            "git:revision": commit,
+            "git:tag": tag,
             "dcterms:date": dt,
-            "prov:url": url,
+            "git:url": url,
         },
     )
 
@@ -147,10 +149,10 @@ def main(config, verbose=False):
     configent = prov.entity(
         ":configurationFile",
         {
+            "prov:location": os.path.basename(config.configFile),
             "dcterms:title": "Configuration file",
             "dcterms:type": "foaf:Document",
             "dcterms:format": "Text file",
-            "prov:atLocation": os.path.basename(config.configFile),
         },
     )
 
@@ -217,12 +219,12 @@ def expandFileSpec(config, spec, category):
     )
     dirmtime = flPathTime(origindir)
     specent = prov.collection(
-        f":{spec}",
+        f":{category}",
         {
-            "dcterms:type": "prov:Collection",
+            "prov:location": origindir,
+            "dcterms:created": dirmtime,
             "dcterms:title": category,
-            "prov:atLocation": origindir,
-            "prov:GeneratedAt": dirmtime,
+            "dcterms:value": spec,
         },
     )
     prov.used(provlabel, specent)
@@ -239,7 +241,7 @@ def expandFileSpec(config, spec, category):
                     prov.entity(
                         f":{os.path.basename(file)}",
                         {
-                            "prov:atLocation": origindir,
+                            "prov:location": origindir,
                             "dcterms:created": flModDate(file),
                         },
                     )
@@ -324,12 +326,11 @@ def processStationFiles(config):
 
     # Provenance:
     geostnlist = prov.entity(
-        ":GeospatialStationData",
+        "tsed:GeospatialStationData",
         {
+            "prov:location": geojsonfile,
             "dcterms:type": "void:dataset",
             "dcterms:description": "Geospatial station information",
-            "prov:atLocation": geojsonfile,
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
             "dcterms:format": "GeoJSON",
         },
     )
@@ -344,10 +345,9 @@ def processStationFiles(config):
     txtstnlist = prov.entity(
         ":TextStationData",
         {
+            "prov:location": txtfile,
             "dcterms:type": "void:dataset",
             "dcterms:description": "Text format station information",
-            "prov:atLocation": txtfile,
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
             "dcterms:format": "csv",
         },
     )

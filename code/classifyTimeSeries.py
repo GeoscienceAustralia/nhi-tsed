@@ -45,8 +45,10 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
+prov.add_namespace("sioc", "http://rdfs.org/sioc/ns#")
 prov.add_namespace("git", "https://github.com/GeoscienceAustralia/nhi-tsed")
-provlabel = ":stormDataClassification"
+prov.add_namespace("tsed", "http://ga.gov.au/hazards")
+provlabel = "tsed:stormDataClassification"
 provtitle = "Storm data classification"
 
 codeent = prov.entity(
@@ -56,23 +58,23 @@ codeent = prov.entity(
         "git:commit": commit,
         "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
 sktimeent = prov.entity(
     "sktime",
     {
-        "prov:Revision": sktime.__version__,
-        "prov:url": "http://doi.org/10.5281/zenodo.3749000"
+        "prov:location": "http://doi.org/10.5281/zenodo.3749000",
+        "sioc:latest_version": sktime.__version__,
     }
 )
 
 pandasent = prov.entity(
     "pandas",
     {
-        "prov:Revision": pd.__version__,
-        "prov:url": "https://doi.org/10.5281/zenodo.3509134"
+        "prov:location": "https://doi.org/10.5281/zenodo.3509134",
+        "sioc:latest_version": pd.__version__,
     }
 )
 
@@ -106,15 +108,14 @@ eventFile = pjoin(TRAINDIR, "visual_storm_types.csv")
 
 # Station location data (high-quality stations)
 stnent = prov.entity(
-    ":HQstationLocation",
+    "tsed:HQstationLocation",
     {
+        "prov:location": pjoin(BASEDIR, "hqstations.csv"),
         "dcterms:title": "High-quality station information",
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": pjoin(BASEDIR, "hqstations.csv"),
-        "prov:generatedAtTime": flModDate(pjoin(BASEDIR, "hqstations.csv"))
+        "dcterms:created": flModDate(pjoin(BASEDIR, "hqstations.csv")),
     }
 )
-
 
 # This is the visually classified training dataset:
 LOGGER.info("Loading visually classified storm data")
@@ -127,12 +128,12 @@ stormdf = pd.read_csv(
 
 # Storm classification definition entity:
 stdef = prov.entity(
-    ":stormClassificationTrainingSet",
+    "tsed:stormClassificationTrainingSet",
     {
+        "prov:location": eventFile,
         "dcterms:title": "Storm classification training set",
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": eventFile,
-        "prov:generatedAtTime": flModDate(eventFile)
+        "dcterms:created": flModDate(eventFile)
     },
 )
 
@@ -365,12 +366,12 @@ allstndf = gpd.read_file(fullStationFile)
 allstndf.set_index("stnNum", inplace=True)
 allstndf['stnWMOIndex'] = allstndf['stnWMOIndex'].astype('Int64')
 prov.entity(
-    ":GeospatialStationData",
+    "tsed:GeospatialStationData",
     {
+        "prov:location": fullStationFile,
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station information",
-        "prov:atLocation": fullStationFile,
-        "prov:GeneratedAt": flModDate(fullStationFile),
+        "dcterms:created": flModDate(fullStationFile),
         "dcterms:format": "GeoJSON",
     },
 )
@@ -422,12 +423,12 @@ outputstormdf = pd.DataFrame(
 LOGGER.debug("Writing storm value counts to file")
 outputstormdf.stormType.value_counts().to_excel(pjoin(OUTPUTPATH, "stormcounts.xlsx"))  # noqa: E501
 stormcounttbl = prov.entity(
-    ":stormCountTable",
+    "tsed:stormCountTable",
     {
+        "prov:location": pjoin(OUTPUTPATH, "stormcounts.xlsx"),
         "dcterms:title": "Storm count table",
         "dcterms:type": "Spreadsheet",
-        "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-        "prov:atLocation": pjoin(OUTPUTPATH, "stormcounts.xlsx")
+        "dcterms:created": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -446,12 +447,13 @@ plt.text(
 )
 plt.savefig(pjoin(PLOTPATH, "stormcounts.png"), bbox_inches="tight")
 stormcountfig = prov.entity(
-    ":stormCountFigure",
+    "tsed:stormCountFigure",
     {
+        "prov:location": pjoin(PLOTPATH, "stormcounts.png"),
         "dcterms:titile": "Storm count figure",
         "dcterms:type": "Figure",
-        "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-        "prov:atLocation": pjoin(PLOTPATH, "stormcounts.png"),
+        "dcterms:created": datetime.now().strftime(DATEFMT),
+
     },
 )
 
@@ -467,12 +469,12 @@ for storm in stormclasses:
     meanst = stevents.groupby("tdiff").mean(numeric_only=True).reset_index()
     plotEvent(meanst, storm)
     pltent = prov.entity(
-        f":mean{storm}Class",
+        f"tsed:mean{storm}Class",
         {
+            "prov:location": pjoin(PLOTPATH, f"{storm}.png"),
             "dcterms:title": f"Mean storm profile for {storm}",
             "dcterms:type": "Figure",
-            "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-            "prov:atLocation": pjoin(PLOTPATH, f"{storm}.png"),
+            "dcterms:created": datetime.now().strftime(DATEFMT),
         },
     )
     pltact = prov.activity(
@@ -494,21 +496,20 @@ LOGGER.info("Saving provenance information")
 endtime = datetime.now().strftime(DATEFMT)
 
 outputstdef = prov.entity(
-    ":stormClassifcationSet",
+    "tsed:stormClassifcationSet",
     {
+        "prov:location": outputFile,
         "dcterms:title": "Storm classifications",
         "dcterms:type": "dcterms:Dataset",
-        "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-        "prov:atLocation": outputFile,
     },
 )
 
-prov.wasDerivedFrom(outputstdef, stdef)
+prov.wasDerivedFrom(outputstdef, stdef, time=datetime.now().strftime(DATEFMT))
 
 classact = prov.activity(provlabel, starttime, endtime)
 prov.used(classact, stdef)
 prov.used(classact, stnent)
-prov.used(classact, ":GeospatialStationData")
+prov.used(classact, "tsed:GeospatialStationData")
 prov.wasGeneratedBy(classact, codeent)
 prov.wasDerivedFrom(codeent, sktimeent)
 prov.wasDerivedFrom(codeent, pandasent)
