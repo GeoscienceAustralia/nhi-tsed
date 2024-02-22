@@ -19,7 +19,9 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib import patheffects
 import pandas as pd
+import geopandas as gpd
 import numpy as np
+import seaborn as sns
 from prov.model import ProvDocument
 
 
@@ -43,66 +45,77 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
-provlabel = ":stormDataClassification"
+prov.add_namespace("sioc", "http://rdfs.org/sioc/ns#")
+prov.add_namespace("git", "https://github.com/GeoscienceAustralia/nhi-tsed")
+prov.add_namespace("tsed", "http://ga.gov.au/hazards")
+provlabel = "tsed:stormDataClassification"
 provtitle = "Storm data classification"
 
 codeent = prov.entity(
     sys.argv[0],
     {
         "dcterms:type": "prov:SoftwareAgent",
-        "prov:Revision": commit,
-        "prov:tag": tag,
+        "git:commit": commit,
+        "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
 sktimeent = prov.entity(
     "sktime",
     {
-        "prov:Revision": sktime.__version__,
-        "prov:url": "http://doi.org/10.5281/zenodo.3749000"
+        "prov:location": "http://doi.org/10.5281/zenodo.3749000",
+        "sioc:latest_version": sktime.__version__,
     }
 )
 
 pandasent = prov.entity(
     "pandas",
     {
-        "prov:Revision": pd.__version__,
-        "prov:url": "https://doi.org/10.5281/zenodo.3509134"
+        "prov:location": "https://doi.org/10.5281/zenodo.3509134",
+        "sioc:latest_version": pd.__version__,
     }
 )
 
 
 # We use the current user as the primary agent:
-useragent = prov.agent(f":{getpass.getuser()}", {"prov:type": "prov:Person"})
+useragent = prov.agent(
+    f":{getpass.getuser()}",
+    {"prov:type": "prov:Person"}
+)
 
 orgagent = prov.agent(
     "GeoscienceAustralia",
-    {"prov:type": "prov:Organisation", "foaf:name": "Geoscience Australia"},
+    {
+        "prov:type": "prov:Organisation",
+        "foaf:name": "Geoscience Australia"
+    },
 )
 
 prov.wasAssociatedWith(codeent, useragent)
 prov.actedOnBehalfOf(useragent, orgagent)
 
 # Following can be put into command line args or config file:
-BASEDIR = r"..\data\training"
-OUTPUTPATH = pjoin(r"..\data\allevents", "results")
+BASEDIR = r"..\data"
+TRAINDIR = pjoin(BASEDIR, "training")
+OUTPUTPATH = pjoin(BASEDIR, "allevents", "results")
+PLOTPATH = pjoin(BASEDIR, "allevents", "plots")
 LOGGER = flStartLog(r"..\output\classifyTimeSeries.log", "INFO", verbose=True)
-stndf = pd.read_csv(r"..\data\hqstations.csv", index_col="stnNum")
-eventFile = pjoin(BASEDIR, "visual_storm_types.csv")
+hqstndf = pd.read_csv(pjoin(BASEDIR, "hqstations.csv"), index_col="stnNum")
+fullStationFile = pjoin(BASEDIR, "StationDetails.geojson")
+eventFile = pjoin(TRAINDIR, "visual_storm_types.csv")
 
 # Station location data (high-quality stations)
 stnent = prov.entity(
-    ":HQstationLocation",
+    "tsed:HQstationLocation",
     {
+        "prov:location": pjoin(BASEDIR, "hqstations.csv"),
         "dcterms:title": "High-quality station information",
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": r"..\data\hqstations.csv",
-        "prov:generatedAtTime": flModDate(r"..\data\hqstations.csv")
+        "dcterms:created": flModDate(pjoin(BASEDIR, "hqstations.csv")),
     }
 )
-
 
 # This is the visually classified training dataset:
 LOGGER.info("Loading visually classified storm data")
@@ -115,19 +128,14 @@ stormdf = pd.read_csv(
 
 # Storm classification definition entity:
 stdef = prov.entity(
-    ":stormClassificationTrainingSet",
+    "tsed:stormClassificationTrainingSet",
     {
+        "prov:location": eventFile,
         "dcterms:title": "Storm classification training set",
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": eventFile,
-        "prov:generatedAtTime": flModDate(eventFile)
+        "dcterms:created": flModDate(eventFile)
     },
 )
-# eventFile = pjoin(BASEDIR, "NA_all.csv")
-# stormdf = pd.read_csv(eventFile, usecols=[2, 3, 4], parse_dates=['date'],
-#                 dtype={'stnNum': float,
-#                        'stormType': 'category'},
-#                 converters={'stnNum': lambda s: int(float(s.strip() or 0))})
 
 stormdf.set_index(["stnNum", "date"], inplace=True)
 nevents = len(stormdf)
@@ -246,7 +254,7 @@ def plotEvent(df: pd.DataFrame, stormType: str):
     pmin, pmax = axp.get_ylim()
     tmin, tmax = axt.get_ylim()
     ax.set_ylim((0, max(gmax, 100)))
-    ax.set_xlabel("Time from gust peak(minutes)")
+    ax.set_xlabel("Time from gust peak [minutes]")
     axp.set_ylim((min(-2.0, pmin), max(pmax, 2.0)))
     axt.set_ylim((min(-2.0, tmin), max(tmax, 2.0)))
 
@@ -266,7 +274,7 @@ def plotEvent(df: pd.DataFrame, stormType: str):
         ha="right",
         va="top",
     )
-    plt.savefig(pjoin(OUTPUTPATH, f"{stormType}.png"), bbox_inches="tight")
+    plt.savefig(pjoin(PLOTPATH, f"{stormType}.png"), bbox_inches="tight")
 
 
 # Load all the events into a single dataframe. We'll then pick out the events
@@ -274,54 +282,59 @@ def plotEvent(df: pd.DataFrame, stormType: str):
 # index from the storm classification data:
 LOGGER.info("Creating dataframe with all visually classified storm data")
 dflist = []
-for stn in stndf.index:
-    df = loadData(stn, BASEDIR)
+for stn in hqstndf.index:
+    df = loadData(stn, TRAINDIR)
     dflist.append(df)
 
+# Visual classification dataframe:
 vcdf = pd.concat(dflist)
 vcdf["idx"] = vcdf.index
 
-
-# Split into a preliminary training and test dataset:
-LOGGER.info("Splitting the visually classified data into test and train sets")
-eventdf_train = vcdf.loc[train_storms.index]
-eventdf_test = vcdf.loc[test_storms.index]
-
 vars = ["windgust", "tempanom", "stnpanom", "dpanom"]
 nvars = len(vars)
-# Apply a standard scaler (zero mean and unit variance):
-# testscaler = StandardScaler()
-# eventdf_train[vars] = testscaler.fit_transform(eventdf_train[vars].values)
-# eventdf_test[vars] = testscaler.transform(eventdf_test[vars].values)
-# fullscaler = StandardScaler()
-# vcdf[vars] = fullscaler.fit_transform(vcdf[vars].values)
 
-X = eventdf_train.reset_index().set_index(["idx", "tdiff"])[vars]
-XX = np.moveaxis(X.values.reshape((ntrain, 121, nvars)), 1, -1)
+# Apply a standard scaler (zero mean and unit variance):
+scaler = StandardScaler()
+vcdf[vars] = scaler.fit_transform(vcdf[vars].values)
+
+# Split into a preliminary training and test dataframes:
+LOGGER.info("Splitting the visually classified data into test and train sets")
+traindf = vcdf.loc[train_storms.index]
+testdf = vcdf.loc[test_storms.index]
+
+trainset = traindf.reset_index().set_index(["idx", "tdiff"])[vars]
+trainarray = np.moveaxis(trainset.values.reshape((ntrain, 121, nvars)), 1, -1)
 y = np.array(train_storms["stormType"].values)
 
-X_test = eventdf_test.reset_index().set_index(["idx", "tdiff"])[vars]
-XX_test = np.moveaxis(X_test.values.reshape((200, 121, nvars)), 1, -1)
+testset = testdf.reset_index().set_index(["idx", "tdiff"])[vars]
+testarray = np.moveaxis(testset.values.reshape((200, 121, nvars)), 1, -1)
 
 # Here we use the full set of visually classified events for training
 # the classifier:
-fulltrain = vcdf.loc[stormdf.index].reset_index().set_index(["idx", "tdiff"])[vars]  # noqa: E501
+fulltrain = (
+    vcdf.loc[stormdf.index].
+    reset_index().
+    set_index(["idx", "tdiff"])[vars])
+
+# noqa: E501
 fulltrainarray = np.moveaxis(
     (fulltrain.values.reshape((len(stormdf), 121, nvars))), 1, -1
 )
 
 # Create array of storm types from the visually classified data:
 fully = np.array(
-    list(stormdf.loc[fulltrain.reset_index()["idx"].unique()]["stormType"].values)  # noqa: E501
+    list(stormdf.loc[
+        fulltrain.reset_index()["idx"].unique()
+        ]["stormType"].values)  # noqa: E501
 )
 
 # First start with the training set:
-LOGGER.info("Running the training set")
+LOGGER.info("Running the training set with 10,000 kernels")
 rocket = RocketClassifier(num_kernels=10000)
-rocket.fit(XX, y)
-y_pred = rocket.predict(XX_test)
+rocket.fit(trainarray, y)
+y_pred = rocket.predict(testarray)
 results = pd.DataFrame(data={"prediction": y_pred, "visual": test_storms["stormType"]})  # noqa: E501
-score = rocket.score(XX_test, test_storms["stormType"])
+score = rocket.score(testarray, test_storms["stormType"])
 LOGGER.info(f"Accuracy of the classifier for the training set: {score}")
 
 # Now run the classifier on the full event set:
@@ -342,38 +355,32 @@ stormclasses = [
     "Spike",
     "Unclassified",
 ]
+
 (
     pd.crosstab(results["visual"], results["prediction"])
     .reindex(stormclasses)[stormclasses]
-    .to_excel(pjoin(r"..\data\training", "crosstab.xlsx"))
+    .to_excel(pjoin(TRAINDIR, "crosstab.xlsx"))
 )
 
-
-allstnfile = r"X:\georisk\HaRIA_B_Wind\data\raw\from_bom\2022\1-minute\HD01D_StationDetails.txt"  # noqa
-
-allstndf = pd.read_csv(
-    allstnfile,
-    sep=",",
-    index_col="stnNum",
-    names=ONEMINUTESTNNAMES,
-    keep_default_na=False,
-    converters={"stnName": str.strip, "stnState": str.strip},
-)
-
-allstnent = prov.entity(
-    ":allStationLocation",
+allstndf = gpd.read_file(fullStationFile)
+allstndf.set_index("stnNum", inplace=True)
+allstndf['stnWMOIndex'] = allstndf['stnWMOIndex'].astype('Int64')
+prov.entity(
+    "tsed:GeospatialStationData",
     {
-        "dcterms:title": "Full station information",
-        "dcterms:type": "void:Dataset",
-        "prov:atLocation": allstnfile,
-        "prov:generatedAtTime": flModDate(allstnfile)
-    }
+        "prov:location": fullStationFile,
+        "dcterms:type": "void:dataset",
+        "dcterms:description": "Geospatial station information",
+        "dcterms:created": flModDate(fullStationFile),
+        "dcterms:format": "GeoJSON",
+    },
 )
+
 alldatadflist = []
 LOGGER.info("Loading all events with maximum gust > 60 km/h")
 for stn in allstndf.index:
     try:
-        df = loadData(stn, r"..\data\allevents")
+        df = loadData(stn, pjoin(BASEDIR, "allevents"))
     except FileNotFoundError:
         LOGGER.debug(f"No data for station: {stn}")
         pass
@@ -382,30 +389,31 @@ for stn in allstndf.index:
 
 alldatadf = pd.concat(alldatadflist)
 alldatadf["idx"] = alldatadf.index
-# alldatadf[vars] = fullscaler.transform(alldatadf[vars].values)
+
+alldatadf[vars] = scaler.transform(alldatadf[vars].values)
 allX = alldatadf.reset_index().set_index(["idx", "tdiff"])[vars]
 
-# Remove any events that have < 121 observations, or have missing
-# data in any of the variables.
 naidx = []
 LOGGER.info("Removing storms with insufficient data:")
 for ind, tmpdf in allX.groupby(level="idx"):
     if len(tmpdf) < 121:
         naidx.append(ind)
-        LOGGER.info(f"{ind}, {len(tmpdf)}")
+        LOGGER.info(f"< 121 obs: {ind}, {len(tmpdf)}")
     if tmpdf.isna().sum().sum() > 0:
         # Found NAN values in the data (usually dew point)
         naidx.append(ind)
-        LOGGER.info(f"{ind}, {len(tmpdf)}")
+        LOGGER.info(f"NaN values: {ind}, {len(tmpdf)}")
 
 allXupdate = allX.drop(naidx, level="idx")
 nstorms = int(len(allXupdate) / 121)
 vars = ["windgust", "tempanom", "stnpanom", "dpanom"]
 nvars = len(vars)
 allXX = np.moveaxis(allXupdate.values.reshape((nstorms, 121, nvars)), 1, -1)
-
 LOGGER.info(f"Running the classifier for all {nstorms} events")
 stormclass = rocket.predict(allXX)
+
+LOGGER.info("Reset the scaling to plot data")
+allXupdate[vars] = scaler.inverse_transform(allXupdate[vars])
 
 outputstormdf = pd.DataFrame(
     data={"stormType": stormclass},
@@ -414,11 +422,21 @@ outputstormdf = pd.DataFrame(
 
 LOGGER.debug("Writing storm value counts to file")
 outputstormdf.stormType.value_counts().to_excel(pjoin(OUTPUTPATH, "stormcounts.xlsx"))  # noqa: E501
-
+stormcounttbl = prov.entity(
+    "tsed:stormCountTable",
+    {
+        "prov:location": pjoin(OUTPUTPATH, "stormcounts.xlsx"),
+        "dcterms:title": "Storm count table",
+        "dcterms:type": "Spreadsheet",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
+    }
+)
 
 LOGGER.debug("Plotting storm counts")
 fig, ax = plt.subplots(1, 1, figsize=(12, 8))
-outputstormdf.stormType.value_counts().plot(kind="bar", ax=ax)
+colors = sns.color_palette("viridis", n_colors=8)
+outputstormdf.stormType.value_counts().loc[stormclasses].plot(
+    kind="bar", ax=ax, color=colors)
 plt.text(
     1.0,
     -0.05,
@@ -427,14 +445,15 @@ plt.text(
     ha="right",
     va="top",
 )
-plt.savefig(pjoin(OUTPUTPATH, "stormcounts.png"), bbox_inches="tight")
+plt.savefig(pjoin(PLOTPATH, "stormcounts.png"), bbox_inches="tight")
 stormcountfig = prov.entity(
-    ":stormCountFigure",
+    "tsed:stormCountFigure",
     {
+        "prov:location": pjoin(PLOTPATH, "stormcounts.png"),
         "dcterms:titile": "Storm count figure",
         "dcterms:type": "Figure",
-        "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-        "prov:atLocation": pjoin(OUTPUTPATH, "stormcounts.png"),
+        "dcterms:created": datetime.now().strftime(DATEFMT),
+
     },
 )
 
@@ -447,21 +466,21 @@ for storm in stormclasses:
     LOGGER.info(f"Plotting mean profile for {storm} class events")
     stidx = outputstormdf[outputstormdf["stormType"] == storm].index
     stevents = allXupdate[allXupdate.index.get_level_values("idx").isin(stidx)]
-    meanst = stevents.groupby("tdiff").mean().reset_index()
+    meanst = stevents.groupby("tdiff").mean(numeric_only=True).reset_index()
     plotEvent(meanst, storm)
     pltent = prov.entity(
-        f":mean{storm}Class",
+        f"tsed:mean{storm}Class",
         {
+            "prov:location": pjoin(PLOTPATH, f"{storm}.png"),
             "dcterms:title": f"Mean storm profile for {storm}",
             "dcterms:type": "Figure",
-            "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-            "prov:atLocation": pjoin(OUTPUTPATH, f"{storm}.png"),
+            "dcterms:created": datetime.now().strftime(DATEFMT),
         },
     )
     pltact = prov.activity(
         f":plotMean{storm}",
         datetime.now().strftime(DATEFMT)
-        )
+    )
     pltents.append(pltent)
     pltacts.append(pltact)
 
@@ -477,24 +496,25 @@ LOGGER.info("Saving provenance information")
 endtime = datetime.now().strftime(DATEFMT)
 
 outputstdef = prov.entity(
-    ":stormClassifcationSet",
+    "tsed:stormClassifcationSet",
     {
+        "prov:location": outputFile,
         "dcterms:title": "Storm classifications",
         "dcterms:type": "dcterms:Dataset",
-        "prov:generatedAtTime": datetime.now().strftime(DATEFMT),
-        "prov:atLocation": outputFile,
     },
 )
 
-prov.wasDerivedFrom(outputstdef, stdef)
+prov.wasDerivedFrom(outputstdef, stdef, time=datetime.now().strftime(DATEFMT))
 
 classact = prov.activity(provlabel, starttime, endtime)
 prov.used(classact, stdef)
 prov.used(classact, stnent)
+prov.used(classact, "tsed:GeospatialStationData")
 prov.wasGeneratedBy(classact, codeent)
 prov.wasDerivedFrom(codeent, sktimeent)
 prov.wasDerivedFrom(codeent, pandasent)
 prov.wasGeneratedBy(outputstdef, classact, time=starttime)
+prov.wasGeneratedBy(stormcounttbl, classact)
 prov.wasGeneratedBy(stormcountfig, classact)
 for pltent, pltact in zip(pltents, pltacts):
     prov.wasGeneratedBy(pltent, pltact)

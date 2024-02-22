@@ -2,7 +2,7 @@
 Objective event classification using gust ratio
 
 Classify wind gust events into convective or non-convective based on the wind
-gust ratio, as defined in El Rafei et al. 2023
+gust ratio, as defined in El Rafei et al. 2023.
 
 If r_1 = V_G/V_1 < 2.0 and r_2 = V_G/V_2 < 2.0, then the event is considered
 synoptic. Otherwise, the event is classed as convective
@@ -16,11 +16,14 @@ characterisation of extreme wind gust hazards in New South Wales,
 Australia. *Nat Hazards*, **117**, 875–895,
 https://doi.org/10.1007/s11069-023-05887-1.
 
-
 To run:
 
-python classifyGustEvents.py -c classifyGustEvents.ini
-
+#. Edit the configuration file (classifyGustEvents.ini) to set the paths
+   to files and output folders.
+#. Ensure the required Python libraries are installed in your environment
+#. Ensure you have the `nhi-pylib` repo installed, and the path included
+   in your PYTHONPATH environment variable.
+#. Run `python classifyGustEvents.py -c classifyGustEvents.ini`
 """
 
 import os
@@ -38,6 +41,9 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import warnings
+
+from metpy.calc import relative_humidity_from_dewpoint as dp2rh
+from metpy.units import units
 
 from process import pAlreadyProcessed, pWriteProcessedFile, pArchiveFile, pInit
 from files import flStartLog, flGetStat, flSize, flGitRepository
@@ -72,25 +78,28 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
-provlabel = ":stormGustClassification"
+prov.add_namespace("sioc", "http://rdfs.org/sioc/ns#")
+prov.add_namespace("git", "https://github.com/GeoscienceAustralia")
+prov.add_namespace("tsed", "https://ga.gov.au/hazards")
+provlabel = "tsed:stormGustClassification"
 provtitle = "Storm gust classification"
 
 codeent = prov.entity(
     sys.argv[0],
     {
         "dcterms:type": "prov:SoftwareAgent",
-        "prov:Revision": commit,
-        "prov:tag": tag,
+        "git:commit": commit,
+        "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
 pandasent = prov.entity(
     "pandas",
     {
-        "prov:Revision": pd.__version__,
-        "prov:url": "https://doi.org/10.5281/zenodo.3509134"
+        "prov:location": "https://doi.org/10.5281/zenodo.3509134",
+        "sioc:latest_version": pd.__version__,
     }
 )
 
@@ -108,7 +117,7 @@ orgagent = prov.agent(
     },
 )
 
-prov.wasAssociatedWith(codeent, useragent)
+prov.wasAttributedTo(codeent, useragent)
 prov.actedOnBehalfOf(useragent, orgagent)
 
 
@@ -158,13 +167,13 @@ def main(config, verbose=False):
     commit, tag, dt, url = flGitRepository(sys.argv[0])
 
     prov.agent(
-        sys.argv[0],
+        os.path.basename(sys.argv[0]),
         {
             "dcterms:type": "prov:SoftwareAgent",
-            "prov:Revision": commit,
-            "prov:tag": tag,
+            "git:commit": commit,
+            "git:tag": tag,
             "dcterms:date": dt,
-            "prov:url": url,
+            "git:url": url,
         },
     )
 
@@ -191,10 +200,11 @@ def main(config, verbose=False):
     configent = prov.entity(
         ":configurationFile",
         {
+            "prov:location": os.path.basename(config.configFile),
             "dcterms:title": "Configuration file",
             "dcterms:type": "foaf:Document",
             "dcterms:format": "Text file",
-            "prov:atLocation": os.path.basename(config.configFile),
+            "dcterms:created": flModDate(config.configFile)
         },
     )
 
@@ -207,13 +217,15 @@ def main(config, verbose=False):
         provlabel,
         starttime,
         endtime,
-        {"dcterms:title": provtitle, "dcterms:type": "void:Dataset"},
+        {
+            "dcterms:title": provtitle,
+            "dcterms:type": "void:Dataset"},
     )
-    prov.actedOnBehalfOf(extractionact, f":{getpass.getuser()}")
+    prov.wasAssociatedWith(extractionact, f":{getpass.getuser()}")
     prov.actedOnBehalfOf(f":{getpass.getuser()}", "GeoscienceAustralia")
     prov.used(provlabel, configent)
-    prov.used(provlabel, ":GeospatialStationData")
-    prov.wasAssociatedWith(extractionact, sys.argv[0])
+    prov.used(provlabel, "tsed:GeospatialStationData")
+    prov.wasAssociatedWith(extractionact, os.path.basename(sys.argv[0]))
 
     prov.serialize(pjoin(outputDir, "gustextraction.xml"), format="xml")
 
@@ -235,12 +247,12 @@ def LoadStationFile(config):
     g_stations = gpd.read_file(stationFile)
     g_stations.set_index("stnNum", inplace=True)
     prov.entity(
-        ":GeospatialStationData",
+        "tsed:GeospatialStationData",
         {
+            "prov:location": stationFile,
             "dcterms:type": "void:dataset",
             "dcterms:description": "Geospatial station information",
-            "prov:atLocation": stationFile,
-            "prov:GeneratedAt": flModDate(stationFile),
+            "dcterms:created": flModDate(stationFile),
             "dcterms:format": "GeoJSON",
         },
     )
@@ -301,12 +313,12 @@ def expandFileSpec(config, spec, category):
     )
     dirmtime = flPathTime(origindir)
     specent = prov.collection(
-        f":{spec}",
+        f":{category}",
         {
+            "prov:location": origindir,
             "dcterms:type": "prov:Collection",
-            "dcterms:title": category,
-            "prov:atLocation": origindir,
-            "prov:GeneratedAt": dirmtime,
+            "dcterms:description": spec,
+            "dcterms:created": dirmtime,
         },
     )
     prov.used(provlabel, specent)
@@ -323,7 +335,7 @@ def expandFileSpec(config, spec, category):
                     prov.entity(
                         f":{os.path.basename(file)}",
                         {
-                            "prov:atLocation": origindir,
+                            "prov:location": origindir,
                             "dcterms:created": flModDate(file),
                         },
                     )
@@ -398,16 +410,15 @@ def processFiles(config):
                     os.unlink(f)
 
     gustent = prov.entity(
-        ":DailyGustClassification",
+        "tsed:DailyGustClassification",
         {
+            "prov:location": pjoin(outputDir, "gustratio"),
             "dcterms:type": "void:Dataset",
             "dcterms:description": "Gust classification of daily max wind gust",  # noqa: E501
-            "prov:atLocation": pjoin(outputDir, "gustratio"),
-            "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
         },
     )
 
-    prov.wasGeneratedBy(gustent, provlabel)
+    prov.wasGeneratedBy(gustent, provlabel, time=datetime.now().strftime(DATEFMT))  # noqa
 
 
 def processFile(filename: str, config) -> bool:
@@ -451,10 +462,10 @@ def processFile(filename: str, config) -> bool:
             e1 = prov.entity(
                 filename,
                 {
+                    "prov:location": pjoin(outputDir, "events", basename),
                     "dcterms:type": "void:dataset",
                     "dcterms:description": "Gust event information",
-                    "prov:atLocation": pjoin(outputDir, "events", basename),
-                    "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
+                    "dcterms:created": datetime.now().strftime(DATEFMT),
                     "dcterms:format": outputFormat,
                 },
             )
@@ -487,30 +498,35 @@ def extractGustRatio(filename, stnState, variable="windgust"):
             names=ONEMINUTENAMES,
             header=0,
             parse_dates={"datetime": [7, 8, 9, 10, 11]},
+            date_format="%Y %m %d %H %M",
             na_values=["####"],
             skipinitialspace=True,
         )
     except Exception as err:
         LOGGER.exception(f"Cannot load data from {filename}: {err}")
         return None
+    df['rh'] = dp2rh(
+        df['temp'].values * units.degC,
+        df['dewpoint'].values * units.degC
+        ).to('percent').magnitude
 
     LOGGER.debug("Filtering on quality flags")
     for var in [
         "temp",
         "temp1max",
         "temp1min",
-        "wbtemp",
         "dewpoint",
-        "rh",
         "windspd",
         "windmin",
         "winddir",
-        "windsd",
         "windgust",
         "mslp",
         "stnp",
     ]:
-        df.loc[~df[f"{var}q"].isin(["Y"]), [var]] = np.nan
+        try:
+            df.loc[~df[f"{var}q"].isin(["Y"]), [var]] = np.nan
+        except KeyError as kerr:
+            LOGGER.exception(f"Missing {kerr} from data")
 
     # Hacky way to convert from local standard time to UTC:
     df["datetimeLST"] = pd.to_datetime(df.datetime, format="%Y %m %d %H %M")
