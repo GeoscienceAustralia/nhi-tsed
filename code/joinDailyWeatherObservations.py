@@ -50,7 +50,7 @@ prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
 prov.add_namespace("git", "https://github.com/GeoscienceAustralia/nhi-tsed")
-provlabel = ":joinWeatherObservations"
+provlabel = "tsed:joinWeatherObservations"
 provtitle = "Join storm class to weather observation data"
 
 TZ = {
@@ -89,7 +89,7 @@ codeent = prov.entity(
         "git:commit": commit,
         "git:tag": tag,
         "dcterms:date": dt,
-        "prov:url": url,
+        "git:url": url,
     },
 )
 
@@ -214,12 +214,12 @@ stnDetails = gpd.read_file(fullStationFile)
 stnDetails.set_index("stnNum", inplace=True)
 stnDetails['stnWMOIndex'] = stnDetails['stnWMOIndex'].astype('Int64')
 prov.entity(
-    ":GeospatialStationData",
+    "tsed:GeospatialStationData",
     {
+        "prov:location": fullStationFile,
+        "dcterms:created": flModDate(fullStationFile),
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station information",
-        "prov:atLocation": fullStationFile,
-        "prov:GeneratedAt": flModDate(fullStationFile),
         "dcterms:format": "GeoJSON",
     },
 )
@@ -229,13 +229,13 @@ LOGGER.info(f"Loaded {len(stnDetails)} stations")
 LOGGER.info("Loading storm class data")
 stormClassFile = os.path.join(OUTPUTPATH, "storm_classification_data.csv")
 stormClassEnt = prov.entity(
-    ":ClassifiedDailyStorms",
+    "tsed:ClassifiedDailyStorms",
     {
+        "prov:location": stormClassFile,
+        "dcterms:created": flModDate(stormClassFile),
         "dcterms:title": "Daily classified storm data",
         "dcterms:description": "Daily storm data with storm classes",
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": stormClassFile,
-        "prov:GeneratedAt": flModDate(stormClassFile),
         "dcterms:format": "comma-separated values"
     }
 )
@@ -249,10 +249,10 @@ LOGGER.info("Loading weather description data")
 wxDescEnt = prov.collection(
     ":dailyWeatherDescData",
     {
+        "prov:location": WXDATAPATH,
+        "dcterms:created": flPathTime(WXDATAPATH),
         "dcterms:type": "prov:Collection",
         "dcterms:title": "Daily gust ratio data",
-        "prov:atLocation": WXDATAPATH,
-        "prov:GeneratedAt": flPathTime(WXDATAPATH),
         },
 )
 
@@ -272,7 +272,7 @@ for stn in stnDetails.index:
         entity = prov.entity(
            f":{os.path.basename(fname)}",
            {
-               "prov.atLocation": WXDATAPATH,
+               "prov.location": WXDATAPATH,
                "dcterms:created": flModDate(fname)
            }
         )
@@ -288,14 +288,14 @@ outputFile = os.path.join(OUTPUTPATH, "storm_classification_wxcodes.csv")
 outputData.to_csv(outputFile, index=False)
 
 stormClassWxCodesEnt = prov.entity(
-    ":ClassifiedDailyStormsWxCodes",
+    "tsed:ClassifiedDailyStormsWxCodes",
     {
+        "prov:location": outputFile,
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": "Daily classified storm data with weather codes",
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and weather codes"),
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": outputFile,
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -309,15 +309,15 @@ presentWxCodesTable.to_excel(
 )
 
 presentWxCodesTableEnt = prov.entity(
-    ":presentWxCodesTable",
+    "tsed:presentWxCodesTable",
     {
+        "prov:location": "storm_classification_presentwxcodes.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with present weather codes"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and present weather codes"),
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": "storm_classification_presentwxcodes.xlsx",
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -327,15 +327,15 @@ pastWxCodesTable.to_excel(
 )
 
 pastWxCodesTableEnt = prov.entity(
-    ":pastWxCodesTable",
+    "tsed:pastWxCodesTable",
     {
+        "prov:location": "storm_classification_pastwxcodes.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with past weather codes"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and past weather codes"),
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": "storm_classification_pastwxcodes.xlsx",
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -348,15 +348,15 @@ thunderCodeTable.to_excel(
 )
 
 thunderCodeTableEnt = prov.entity(
-    ":thunderCodeTable",
+    "tsed:thunderCodeTable",
     {
+        "prov:location": "storm_classification_pastwxthunder.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with thunder day code"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and thunder day code"),
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": "storm_classification_pastwxthunder.xlsx",
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -364,30 +364,30 @@ hailCodeTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_pastwxhail.xlsx")
 )
 hailCodeTableEnt = prov.entity(
-    ":hailCodeTable",
+    "tsed:hailCodeTable",
     {
+        "prov:location": "storm_classification_pastwxhail.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with hail code"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and hail code"),
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": "storm_classification_pastwxhail.xlsx",
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
     }
 )
 dustCodeTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_pastwxdust.xlsx")
 )
 dustCodeTableEnt = prov.entity(
-    ":dustCodeTable",
+    "tsed:dustCodeTable",
     {
+        "prov:location": "storm_classification_pastwxdust.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with dust storm code"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and dust storm code"),
         "dcterms:type": "void:Dataset",
-        "prov:atLocation": "storm_classification_pastwxdust.xlsx",
-        "prov:GeneratedAt": datetime.now().strftime(DATEFMT),
     }
 )
 LOGGER.info("Saving provenance data")
@@ -401,8 +401,8 @@ prov.wasDerivedFrom(hailCodeTableEnt, stormClassWxCodesEnt)
 prov.wasDerivedFrom(dustCodeTableEnt, stormClassWxCodesEnt)
 prov.used(provlabel, stormClassEnt)
 prov.used(provlabel, wxDescEnt)
-prov.used(provlabel, ":StormClassFile")
-prov.used(provlabel, ":GeospatialStationData")
+prov.used(provlabel, "tsed:StormClassFile")
+prov.used(provlabel, "tsed:GeospatialStationData")
 
 prov.serialize(
     os.path.join(OUTPUTPATH, "stormclassdatawxcodes.xml"),
