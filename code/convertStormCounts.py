@@ -37,8 +37,10 @@ BASEDIR = r"..\data\allevents"
 OUTPUTPATH = pjoin(BASEDIR, "results")
 LOGGER = flStartLog(r"..\output\convertStormCounts.log", "INFO", verbose=True)
 
-LOGGER.info(f"Loading storm classifications from {pjoin(OUTPUTPATH, 'stormclass.pkl')}")  # noqa
-df = pd.read_pickle(pjoin(OUTPUTPATH, "stormclass.pkl"))
+stormClassFile = pjoin(OUTPUTPATH, "stormclass.csv")
+
+LOGGER.info(f"Loading storm classifications from {stormClassFile}")  # noqa
+df = pd.read_csv(stormClassFile, index_col='idx')
 
 fullStationFile = pjoin(r"..\data", "StationDetails.geojson")
 LOGGER.info(f"Loading station details from {fullStationFile}")
@@ -59,10 +61,10 @@ prov.entity(
 classent = prov.entity(
     "tsed:stormClassifcationSet",
     {
-        "prov:location": pjoin(OUTPUTPATH, "stormclass.pkl"),
+        "prov:location": stormClassFile,
         "dcterms:title": "Storm classifications",
         "dcterms:type": "dcterms:Dataset",
-        "dcterms:created": flModDate(pjoin(OUTPUTPATH, "stormclass.pkl")),
+        "dcterms:created": flModDate(stormClassFile),
     }
 )
 
