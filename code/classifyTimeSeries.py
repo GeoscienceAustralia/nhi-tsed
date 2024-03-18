@@ -26,8 +26,6 @@ import seaborn as sns
 from prov.model import ProvDocument
 from xskillscore import Contingency
 
-
-
 from sklearn.preprocessing import StandardScaler
 from sktime.classification.kernel_based import RocketClassifier
 import sktime
@@ -336,7 +334,8 @@ LOGGER.info("Running the training set with 10,000 kernels")
 rocket = RocketClassifier(num_kernels=10000)
 rocket.fit(trainarray, y)
 y_pred = rocket.predict(testarray)
-results = pd.DataFrame(data={"prediction": y_pred, "visual": test_storms["stormType"]})  # noqa: E501
+results = pd.DataFrame(data={"prediction": y_pred,
+                             "visual": test_storms["stormType"]})
 score = rocket.score(testarray, test_storms["stormType"])
 LOGGER.info(f"Accuracy of the classifier for the training set: {score}")
 
@@ -357,7 +356,8 @@ for i in range(50):
         rocket.fit(trainarray, y)
         y_pred = rocket.predict(testarray)
         t1 = time.time() - t0
-        results = pd.DataFrame(data={'prediction':y_pred, 'visual':test_storms['stormType']})
+        results = pd.DataFrame(data={'prediction': y_pred,
+                                     'visual': test_storms['stormType']})
         results['visint'] = results['visual'].map(mapclass)
         results['predint'] = results['prediction'].map(mapclass)
         xda = results.to_xarray()
@@ -368,13 +368,18 @@ for i in range(50):
         acc = ct.accuracy()
         hss = ct.heidke_score()
         gs = ct.gerrity_score()
-        stats.append([i, n, t1, acc.data.item(), hss.data.item(), gs.data.item()])
+        stats.append([i, n, t1, acc.data.item(),
+                      hss.data.item(), gs.data.item()])
 
-resdf = pd.DataFrame(stats, columns=('iteration', 'nkernels', 'time', 'accuracy', 'hss', 'gs'))
-resstats = resdf.groupby('nkernels').agg({'time': 'mean',
-                               'accuracy':['mean', 'std'],
-                               'hss':['mean', 'std'],
-                               'gs':['mean', 'std'],})
+resdf = pd.DataFrame(stats,
+                     columns=('iteration', 'nkernels',
+                              'time', 'accuracy', 'hss',
+                              'gs'))
+resstats = resdf.groupby('nkernels').agg({
+    'time': 'mean',
+    'accuracy': ['mean', 'std'],
+    'hss': ['mean', 'std'],
+    'gs': ['mean', 'std']})
 resstats.to_excel(pjoin(TRAINDIR, "classification_scoring.xlsx"))
 
 # Now run the classifier on the full event set:
