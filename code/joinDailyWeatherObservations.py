@@ -29,7 +29,6 @@ import warnings
 import pandas as pd
 import geopandas as gpd
 from datetime import datetime, timedelta
-from pathlib import PureWindowsPath
 from prov.model import ProvDocument
 
 from stndata import DAILYNAMES
@@ -50,8 +49,7 @@ prov.add_namespace("xsd", "http://www.w3.org/2001/XMLSchema#")
 prov.add_namespace("foaf", "http://xmlns.com/foaf/0.1/")
 prov.add_namespace("void", "http://vocab.deri.ie/void#")
 prov.add_namespace("dcterms", "http://purl.org/dc/terms/")
-prov.add_namespace("git", "https://github.com/GeoscienceAustralia")
-prov.add_namespace("tsed", "https://ga.gov.au/hazards")
+prov.add_namespace("git", "https://github.com/GeoscienceAustralia/nhi-tsed")
 provlabel = "tsed:joinWeatherObservations"
 provtitle = "Join storm class to weather observation data"
 
@@ -97,7 +95,7 @@ codeent = prov.entity(
 
 # We use the current user as the primary agent:
 useragent = prov.agent(
-    f"{getpass.getuser()}",
+    f":{getpass.getuser()}",
     {"prov:type": "prov:Person"}
 )
 
@@ -218,11 +216,11 @@ stnDetails['stnWMOIndex'] = stnDetails['stnWMOIndex'].astype('Int64')
 prov.entity(
     "tsed:GeospatialStationData",
     {
-        "prov:location": os.path.basename(fullStationFile),
+        "prov:location": fullStationFile,
+        "dcterms:created": flModDate(fullStationFile),
         "dcterms:type": "void:dataset",
         "dcterms:description": "Geospatial station information",
         "dcterms:format": "GeoJSON",
-        "dcterms:created": flModDate(fullStationFile),
     },
 )
 
@@ -233,12 +231,12 @@ stormClassFile = os.path.join(OUTPUTPATH, "storm_classification_data.csv")
 stormClassEnt = prov.entity(
     "tsed:ClassifiedDailyStorms",
     {
-        "prov:location": os.path.basename(stormClassFile),
+        "prov:location": stormClassFile,
+        "dcterms:created": flModDate(stormClassFile),
         "dcterms:title": "Daily classified storm data",
         "dcterms:description": "Daily storm data with storm classes",
         "dcterms:type": "void:Dataset",
-        "dcterms:format": "comma-separated values",
-        "dcterms:created": flModDate(stormClassFile),
+        "dcterms:format": "comma-separated values"
     }
 )
 
@@ -249,9 +247,9 @@ stormData['datetimeLST'] = pd.to_datetime(stormData.datetimeLST)
 
 LOGGER.info("Loading weather description data")
 wxDescEnt = prov.collection(
-    "tsed:dailyWeatherDescData",
+    ":dailyWeatherDescData",
     {
-        "prov:location": PureWindowsPath(WXDATAPATH).as_posix(),
+        "prov:location": WXDATAPATH,
         "dcterms:created": flPathTime(WXDATAPATH),
         "dcterms:type": "prov:Collection",
         "dcterms:title": "Daily gust ratio data",
@@ -274,7 +272,7 @@ for stn in stnDetails.index:
         entity = prov.entity(
            f":{os.path.basename(fname)}",
            {
-               "prov:location": PureWindowsPath(WXDATAPATH).as_posix(),
+               "prov.location": WXDATAPATH,
                "dcterms:created": flModDate(fname)
            }
         )
@@ -292,12 +290,12 @@ outputData.to_csv(outputFile, index=False)
 stormClassWxCodesEnt = prov.entity(
     "tsed:ClassifiedDailyStormsWxCodes",
     {
-        "prov:location": os.path.basename(outputFile),
+        "prov:location": outputFile,
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": "Daily classified storm data with weather codes",
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and weather codes"),
         "dcterms:type": "void:Dataset",
-        "dcterms:created": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -305,12 +303,7 @@ LOGGER.info("Doing cross tabulations of weather codes and storm types")
 colorder = ['Synoptic storm', 'Synoptic front',
             'Storm-burst', 'Thunderstorm',
             'Front up', 'Front down', 'Spike',]
-
-presentWxCodesTable = pd.crosstab(
-    outputData['PresentWeatherCode'],
-    outputData['stormType']
-    )[colorder]
-
+presentWxCodesTable = pd.crosstab(outputData['PresentWeatherCode'], outputData['stormType'])[colorder]  # noqa
 presentWxCodesTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_presentwxcodes.xlsx")
 )
@@ -319,20 +312,16 @@ presentWxCodesTableEnt = prov.entity(
     "tsed:presentWxCodesTable",
     {
         "prov:location": "storm_classification_presentwxcodes.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with present weather codes"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and present weather codes"),
         "dcterms:type": "void:Dataset",
-        "dcterms:created": datetime.now().strftime(DATEFMT),
     }
 )
 
-pastWxCodesTable = pd.crosstab(
-    outputData['PastWeatherCode'],
-    outputData['stormType']
-    )[colorder]
-
+pastWxCodesTable = pd.crosstab(outputData['PastWeatherCode'], outputData['stormType'])[colorder]  # noqa
 pastWxCodesTable.to_excel(
     os.path.join(OUTPUTPATH, "storm_classification_pastwxcodes.xlsx")
 )
@@ -341,12 +330,12 @@ pastWxCodesTableEnt = prov.entity(
     "tsed:pastWxCodesTable",
     {
         "prov:location": "storm_classification_pastwxcodes.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with past weather codes"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and past weather codes"),
         "dcterms:type": "void:Dataset",
-        "dcterms:created": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -362,12 +351,12 @@ thunderCodeTableEnt = prov.entity(
     "tsed:thunderCodeTable",
     {
         "prov:location": "storm_classification_pastwxthunder.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with thunder day code"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and thunder day code"),
         "dcterms:type": "void:Dataset",
-        "dcterms:created": datetime.now().strftime(DATEFMT),
     }
 )
 
@@ -378,12 +367,12 @@ hailCodeTableEnt = prov.entity(
     "tsed:hailCodeTable",
     {
         "prov:location": "storm_classification_pastwxhail.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with hail code"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and hail code"),
         "dcterms:type": "void:Dataset",
-        "dcterms:created": datetime.now().strftime(DATEFMT),
     }
 )
 dustCodeTable.to_excel(
@@ -393,13 +382,12 @@ dustCodeTableEnt = prov.entity(
     "tsed:dustCodeTable",
     {
         "prov:location": "storm_classification_pastwxdust.xlsx",
+        "dcterms:created": datetime.now().strftime(DATEFMT),
         "dcterms:title": ("Daily classified storm data"
                           "with dust storm code"),
         "dcterms:description": ("Daily storm data with"
                                 "storm classes and dust storm code"),
         "dcterms:type": "void:Dataset",
-        "dcterms:created": datetime.now().strftime(DATEFMT),
-
     }
 )
 LOGGER.info("Saving provenance data")

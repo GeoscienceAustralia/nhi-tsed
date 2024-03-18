@@ -13,6 +13,7 @@ full set of events extracted.
 """
 import sys
 import getpass
+import time
 from os.path import join as pjoin
 import logging
 from datetime import datetime
@@ -23,7 +24,7 @@ import geopandas as gpd
 import numpy as np
 import seaborn as sns
 from prov.model import ProvDocument
-
+from xskillscore import Contingency
 
 from sklearn.preprocessing import StandardScaler
 from sktime.classification.kernel_based import RocketClassifier
@@ -170,7 +171,7 @@ def loadData(stnNum: int, datapath: str) -> pd.DataFrame:
     vars = ["windgust", "tempanom", "stnpanom",
             "dpanom", "windspd", "uanom", "vanom"]
     for var in vars:
-        df[var] = df[var].interpolate(method="linear").fillna(method="bfill")
+        df[var] = df[var].interpolate(method="linear").bfill()
 
     df["stnNum"] = stnNum
     df.reset_index(inplace=True)
@@ -333,9 +334,53 @@ LOGGER.info("Running the training set with 10,000 kernels")
 rocket = RocketClassifier(num_kernels=10000)
 rocket.fit(trainarray, y)
 y_pred = rocket.predict(testarray)
-results = pd.DataFrame(data={"prediction": y_pred, "visual": test_storms["stormType"]})  # noqa: E501
+results = pd.DataFrame(data={"prediction": y_pred,
+                             "visual": test_storms["stormType"]})
 score = rocket.score(testarray, test_storms["stormType"])
 LOGGER.info(f"Accuracy of the classifier for the training set: {score}")
+
+mapclass = {'Synoptic storm': 0,
+            'Synoptic front': 1,
+            'Storm-burst': 2,
+            'Thunderstorm': 3,
+            'Front up': 4,
+            'Front down': 5,
+            'Spike': 6}
+
+nkernels = [100, 200, 500, 1000, 2000, 5000, 10_000]
+stats = []
+for i in range(50):
+    for n in nkernels:
+        rocket = RocketClassifier(num_kernels=n)
+        t0 = time.time()
+        rocket.fit(trainarray, y)
+        y_pred = rocket.predict(testarray)
+        t1 = time.time() - t0
+        results = pd.DataFrame(data={'prediction': y_pred,
+                                     'visual': test_storms['stormType']})
+        results['visint'] = results['visual'].map(mapclass)
+        results['predint'] = results['prediction'].map(mapclass)
+        xda = results.to_xarray()
+        ct = Contingency(xda.visint, xda.predint,
+                         observation_category_edges=np.arange(0, 7),
+                         forecast_category_edges=np.arange(0, 7),
+                         dim=['stnNum', 'date'])
+        acc = ct.accuracy()
+        hss = ct.heidke_score()
+        gs = ct.gerrity_score()
+        stats.append([i, n, t1, acc.data.item(),
+                      hss.data.item(), gs.data.item()])
+
+resdf = pd.DataFrame(stats,
+                     columns=('iteration', 'nkernels',
+                              'time', 'accuracy', 'hss',
+                              'gs'))
+resstats = resdf.groupby('nkernels').agg({
+    'time': 'mean',
+    'accuracy': ['mean', 'std'],
+    'hss': ['mean', 'std'],
+    'gs': ['mean', 'std']})
+resstats.to_excel(pjoin(TRAINDIR, "classification_scoring.xlsx"))
 
 # Now run the classifier on the full event set:
 LOGGER.info("Running classifier for all visually-classified events")
