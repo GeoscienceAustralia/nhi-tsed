@@ -25,7 +25,7 @@ Variables required:
 - rainfall
 - quality flags for all variables
 
-Original source data can be requested from the Bureau of Meteorology, Climate Data Services team,
+Original source data can be requested from the Bureau of Meteorology, Climate Data Services team, climatedata@bom.gov.au
 
 
 ## Requirements
@@ -48,10 +48,13 @@ Original source data can be requested from the Bureau of Meteorology, Climate Da
 - metpy
 - pycodestyle
 
+A conda environment file is included in this repository (code/tsenv.yaml).
+
 
 ## Installation
 
-1. Build the conda environment
+1. Build the conda environment using the conda environment file:
+  a. `conda env create -f environment.yml`
 2. Install additional code from https://github.com/GeoscienceAustralia/nhi-pylib
 3. Add the path to the additional code to the `PYTHONPATH` environment variable
 
@@ -67,7 +70,7 @@ Original source data can be requested from the Bureau of Meteorology, Climate Da
 7. `convertStormCounts.py` - convert classified storms to counts of storm type at each station
 8. `joinStormRatesToStationDetails.py` - Join storm rate data to station details and store output in GeoJSON file
 9. `joinStormClassToMaxDailyData.py` - Join storm classification data to daily maximum gust data
-10. `joinDailyWeatherObservations.py`- Join the daily weather observations to the storm data
+10. `joinDailyWeatherObservations.py`- Join the daily weather observations to the storm data to produce the csv file that is imported into the geodatabase.
 
 ## Analysis
 1. `AnalyseClassifiedStorms.ipynb` - interactive notebook to compare this classification against the El Rafei _et al._[^5] gust classification
@@ -81,7 +84,7 @@ _Link to eCat record for the data_
 
 ## Licence
 
-_Add a licence_
+Copyright Commonwealth of Australia (Geoscience Australia). This product is made available under a Creative Commons Attribution (CC-BY) 4.0 International License (https://creativecommons.org/licenses/by/4.0/)
 
 
 ## References
@@ -89,5 +92,5 @@ _Add a licence_
 [^1]: http://www.sktime.net/en/latest/index.html
 [^2]: Spassiani, A. C., and M. S. Mason, 2021: Application of Self-organizing Maps to classify the meteorological origin of wind gusts in Australia. _Journal of Wind Engineering and Industrial Aerodynamics_, **210**, 104529, https://doi.org/10.1016/j.jweia.2021.104529.
 [^3]: Cook, N. J., 2023: Automated classification of gust events in the contiguous USA. _Journal of Wind Engineering and Industrial Aerodynamics_, **234**, 105330, https://doi.org/10.1016/j.jweia.2023.105330.
-[^4]: Dempster, A., F. Petitjean, and G. I. Webb, 2020: ROCKET: exceptionally fast and accurate time series classification using random convolutional kernels. Data Min Knowl Disc, 34, 1454–1495, https://doi.org/10.1007/s10618-020-00701-z.
+[^4]: Dempster, A., F. Petitjean, and G. I. Webb, 2020: ROCKET: exceptionally fast and accurate time series classification using random convolutional kernels. _Data Min Knowl Disc_, 34, 1454–1495, https://doi.org/10.1007/s10618-020-00701-z.
 [^5]: El Rafei, M., S. Sherwood, J. Evans, and A. Dowdy, 2023: Analysis and characterisation of extreme wind gust hazards in New South Wales, Australia. _Nat Hazards_, **117**, 875–895, https://doi.org/10.1007/s11069-023-05887-1.
