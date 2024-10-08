@@ -282,6 +282,9 @@ wxData = pd.concat(wxdatalist)
 
 LOGGER.info("Merging storm classifications with weather codes")
 outputData = stormData.merge(wxData, how='left', on=['datetimeUTC', 'stnNum'])
+wxdesccols = ['PresentWeatherCode', 'PastWeatherCode', 'thunder', 'hail', 'duststorm']
+nstns = outputData[outputData[wxdesccols].notnull().any(axis=1)]['stnNum'].nunique()
+LOGGER.info(f"{nstns} reported weather description data at some point")
 LOGGER.info("Saving output data")
 outputFile = os.path.join(OUTPUTPATH, "storm_classification_wxcodes.csv")
 
