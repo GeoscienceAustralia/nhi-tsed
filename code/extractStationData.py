@@ -41,7 +41,6 @@ import glob
 import argparse
 import getpass
 import logging
-import concurrent.futures
 from os.path import join as pjoin
 from datetime import datetime, timedelta
 from configparser import ConfigParser, ExtendedInterpolation
@@ -61,6 +60,7 @@ from stndata import ONEMINUTESTNNAMES, ONEMINUTEDTYPE, ONEMINUTENAMES
 
 
 warnings.simplefilter("ignore", RuntimeWarning)
+warnings.simplefilter("ignore", FutureWarning)
 pd.set_option("mode.chained_assignment", None)
 
 
@@ -79,6 +79,21 @@ TZ = {
 }
 
 DATEFMT = "%Y-%m-%d %H:%M:%S"
+
+FORMATS = {
+    "pickle": {
+        "ext": "pkl",
+        "func": "to_pickle"
+    },
+    "csv": {
+        "ext": "csv",
+        "func": "to_csv"
+    },
+    "netcdf": {
+        "ext": "nc",
+        "func": "to_nc"
+    }
+}
 
 prov = ProvDocument()
 prov.set_default_namespace("")
@@ -350,34 +365,19 @@ def processFiles(config):
     LOGGER.debug(f"Origin directory: {originDir}")
     outputFormat = config.get("Output", "Format", fallback="pickle")
 
-    max_threads = os.cpu_count()
-
-    with concurrent.futures.ThreadPoolExecutor(max_threads) as executor:
-        futures = {}
-
-        for f in g_files[category]:
-            LOGGER.info(f"Processing {f}")
-            directory, fname, md5sum, moddate = flGetStat(f)
-            if pAlreadyProcessed(directory, fname, "md5sum", md5sum):
-                LOGGER.info(f"Already processed {f}")
-            else:
-                future = executor.submit(processFile, f, config)
-                futures[future] = f
-
-        concurrent.futures.wait(futures)
-
-        for future, f in futures.items():
-            try:
-                result = future.result()
-                if result:
-                    LOGGER.info(f"Successfully processed {f}")
-                    pWriteProcessedFile(f)
-                    if archiveWhenProcessed:
-                        pArchiveFile(f)
-                    elif deleteWhenProcessed:
-                        os.unlink(f)
-            except Exception as e:
-                LOGGER.exception(f"Failed to process {f}")
+    for f in g_files[category]:
+        LOGGER.info(f"Processing {f}")
+        directory, fname, md5sum, moddate = flGetStat(f)
+        if pAlreadyProcessed(directory, fname, "md5sum", md5sum):
+            LOGGER.info(f"Already processed {f}")
+        else:
+            if processFile(f, config):
+                LOGGER.info(f"Successfully processed {f}")
+                pWriteProcessedFile(f)
+                if archiveWhenProcessed:
+                    pArchiveFile(f)
+                elif deleteWhenProcessed:
+                    os.unlink(f)
 
     dmaxent = prov.entity(
         "tsed:DailyMaxOutput",
@@ -427,8 +427,10 @@ def processFile(filename: str, config) -> bool:
 
     # Set the file extension based on intended output format
     outputFormat = config.get("Output", "Format", fallback="pickle")
-    ext = "pkl" if outputFormat == "pickle" else "csv"
-    outfunc = "to_pickle" if outputFormat == "pickle" else "to_csv"
+    ext = FORMATS[outputFormat]['ext']
+    outfunc = FORMATS[outputFormat]['func']
+    #ext = "pkl" if outputFormat == "pickle" else "csv"
+    #outfunc = "to_pickle" if outputFormat == "pickle" else "to_csv"
 
     LOGGER.info(f"Loading data from {filename}")
     LOGGER.debug(f"Data will be written to {outputDir}")
@@ -459,14 +461,25 @@ def processFile(filename: str, config) -> bool:
             LOGGER.debug(
                 f"Writing data to {pjoin(outputDir, 'dailymax', basename)}"
             )  # noqa: E501
-            getattr(dfmax, outfunc)(pjoin(outputDir, "dailymax", basename))
-            getattr(dfmean, outfunc)(pjoin(outputDir, "dailymean", basename))
+            if outputFormat == "netcdf":
+                # TODO: whole point of storing in netcdf is that we can add attributes
+                # to the data, so chaining is not an effective way to achieve this
+                dfmax['date'] = pd.to_datetime(dfmax['date'])
+                dfmax.to_xarray().to_netcdf(pjoin(outputDir, "dailymax", basename))  # noqa: E501
+                dfmean.index = pd.to_datetime(dfmean.index)
+                dfmean.to_xarray().to_netcdf(pjoin(outputDir, "dailymean", basename))  # noqa: E501
+            else:
+                getattr(dfmax, outfunc)(pjoin(outputDir, "dailymax", basename))  # noqa: E501
+                getattr(dfmean, outfunc)(pjoin(outputDir, "dailymean", basename))  # noqa: E501
 
             if eventdf is not None:
                 LOGGER.debug(
                     f"Writing data to {pjoin(outputDir, 'events', basename)}"
                 )  # noqa: E501
-                getattr(eventdf, outfunc)(pjoin(outputDir, "events", basename))
+                if outputFormat == "netcdf":
+                    eventdf.to_xarray().to_netcdf(pjoin(outputDir, "events", basename))  # noqa: E501
+                else:
+                    getattr(eventdf, outfunc)(pjoin(outputDir, "events", basename))  # noqa: E501
                 e1 = prov.entity(
                     basename,
                     {
@@ -745,6 +758,7 @@ def extractDailyMax(
         }
     )
     dfstats.columns = dfstats.columns.map("_".join)
+
     if len(frames) > 0:
         eventdf = pd.concat(frames)
         return dfmax, dfstats, eventdf
