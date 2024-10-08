@@ -67,15 +67,14 @@ def plotClassifiedWindRose(df, stnNum, stnData):
     for ax in g.axes:
         ax.set_rgrids(y_ticks, y_ticks)
 
-    plt.subplots_adjust(bottom=0.9, left=0.0, right=1.0, top=1.0)
-    g.axes[0].legend(bbox_to_anchor=(-1., -0.4), loc='lower center', ncols=4)
-    g.figure.suptitle(stnData.stnName, x=0.475, ha="right")
+    plt.subplots_adjust(bottom=0.15, left=0.0, right=1.0, top=0.85)
+    g.axes[0].legend(bbox_to_anchor=(0.5, 0.0), bbox_transform=g.figure.transFigure, loc='lower center', ncols=4)
+    g.figure.suptitle(stnData.stnName, )
     #plt.text(0.95, 0.025, f"Created: {datetime.now():%Y-%m-%d %H:%M %z}",
     #         transform=g.figure.transFigure, ha='right',
     #         fontsize='xx-small')
     #g.figure.tight_layout()
-    outputfile=os.path.join(
-    DATAPATH, "allevents", "plots", f"{stnNum}.WR.png")
+    outputfile=os.path.join(DATAPATH, "allevents", "plots", f"{stnNum}.WR.png")
     plt.savefig(outputfile, dpi=600)
     plt.close(g.figure)
 
@@ -115,8 +114,11 @@ def plotERWindRose(df, stnNum, stnData):
     for ax in g.axes:
         ax.set_rgrids(y_ticks, y_ticks)
 
-    g.figure.suptitle(stnData.stnName, va="bottom")
-    g.axes[0].legend(bbox_to_anchor=(-0.4, -0.4), loc='lower center', ncols=4)
+    plt.subplots_adjust(bottom=0.2, left=0.0, right=1.0, top=0.8)
+    g.axes[0].legend(bbox_to_anchor=(0.5, 0.0),
+                     bbox_transform=g.figure.transFigure,
+                     loc='lower center', ncols=4, fontsize='small')
+    g.figure.suptitle(stnData.stnName)
     outputfile=os.path.join(
     DATAPATH, "allevents", "plots", f"{stnNum}.ER.png")
     plt.savefig(outputfile, dpi=600)
@@ -124,7 +126,18 @@ def plotERWindRose(df, stnNum, stnData):
 
 df = pd.read_csv(stormClassFile)
 
+#stn=66037
+#sdf = df[df.stnNum==stn]
+#row=stnDetails.loc[stn]
+
+#plotClassifiedWindRose(sdf, stn, row)
+#plotERWindRose(sdf, stn, row)
 for stn, row in stnDetails.iterrows():
+    print(stn, row.stnName)
+    row=stnDetails.loc[stn]
     sdf = df[df.stnNum==stn]
-    plotClassifiedWindRose(sdf, stn, row)
-    plotERWindRose(sdf, stn, row)
+    if len(sdf)==0:
+        continue
+    else:
+        plotClassifiedWindRose(sdf, stn, row)
+        plotERWindRose(sdf, stn, row)
